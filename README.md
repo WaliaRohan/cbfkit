@@ -55,12 +55,6 @@ CBFKit is readily deployable via a Docker image. After setting up Docker (refer 
    ```
    docker run -it --name container-name -v .:/workspace cbfkit:latest
    ```
-    OR:
-   '''
-   docker run -it --rm --net=host --env="DISPLAY" \
-   --volume="$HOME/.Xauthority:/root/.Xauthority:rw" \
-   --volume=".:/home/workspace" \
-   --name x11_enabled cbfkit:latest
 
 ## Start with Tutorials
 Explore the `tutorials` directory to help you get started with CBFKit. Open the Python notebook in the `tutorials` directory to get started. The script `simulate_new_control_system.ipynb` automatically generates the controller, plant, and certificate function for a Van der Pol oscillator. It also generates ROS2 nodes for the plant, controller, sensor, and estimator. These serve as a starting point for developing your own CBF-based controller.

@@ -12,9 +12,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     POETRY_NO_INTERACTION=1 \
     POETRY_VIRTUALENVS_CREATE=false \
     YOUR_ENV=default_value \
-    PATH="/root/.local/bin:${PATH}" \
-    # Set the display variable
-    DISPLAY=:0
+    PATH="/root/.local/bin:${PATH}"
 
 # Version pinning as ARGs for easier updates
 ARG PYTHON_VERSION=3.10
@@ -31,8 +29,6 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y \
     python3-pip \
     python3-dev \
     libopenblas-dev \
-    # x11-apps includes xclock, xeyes, etc.
-    x11-apps \  
     && add-apt-repository -y ppa:deadsnakes/ppa \
     && apt-get install -y python3.10 python3.10-dev python3.10-venv \
     && apt-get clean \
@@ -51,7 +47,7 @@ WORKDIR /home/cbfkit
 COPY pyproject.toml poetry.lock ./
 
 # Set the PYTHONPATH to include /home and project directories
-ENV PYTHONPATH="/home:/home/cbfkit:/home/cbfkit/src:/home/worskpace:/home/workspace/src:${PYTHONPATH}"
+ENV PYTHONPATH="/home:/home/cbfkit:/home/cbfkit/src:${PYTHONPATH}"
 
 # Project initialization and conditionally install cvxopt if on x86 architecture
 RUN poetry install --no-interaction && \
