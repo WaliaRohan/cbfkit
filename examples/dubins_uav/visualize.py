@@ -1,3 +1,12 @@
+import sys
+import os
+
+# Get the current directory
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Add the parent directory to the system path
+sys.path.append(os.path.join(current_dir, "src"))
+
 from jax import jit
 import jax.numpy as jnp
 
@@ -45,7 +54,7 @@ def sigma(x):
 model_name = "dubins_uav"
 
 # Import newly generated Dubins UAV code
-from src.models import dubins_uav
+from models import dubins_uav
 
 # Simulation Parameters
 SAVE_FILE = f"tutorials/{model_name}/simulation_data"
@@ -198,4 +207,4 @@ if animate:
         fig, animate, init_func=None, frames=len(x), interval=20, blit=True
     )
 
-    ani.save("./output.gif", writer="pillow", fps=30)
+    ani.save("./output.mp4", writer="ffmpeg", fps=30)
