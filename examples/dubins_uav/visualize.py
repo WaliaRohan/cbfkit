@@ -184,27 +184,26 @@ if animate:
             )
         )
 
-    # def init():
-    #     for cx, cy, r in zip(centers_x, centers_y, radii):
-    #         ax.add_patch(
-    #             plt.Circle(
-    #                 jnp.array([cx, cy]),
-    #                 r,
-    #                 color="k",
-    #                 fill=True,
-    #                 linewidth=1,
-    #             )
-    #         )
-
-    #     return (line,)
-
     def animate(frame):
         line.set_data(x[:frame, 0], x[:frame, 1])
         return (line,)
 
-    # Create the animation
+    # Create the animation - not using "init" function here as it does not serve
+    # any purpose. The obstacles ("plt.Circle" objects) in the animation are set
+    # globally - I wasn't able to set them using the init function (I believe
+    # they need to be converted to a "ax.plot" object by generating x-y data for
+    # each circle)
     ani = animation.FuncAnimation(
         fig, animate, init_func=None, frames=len(x), interval=20, blit=True
     )
 
-    ani.save("./output.mp4", writer="ffmpeg", fps=30)
+    if animation.writers.is_available("ffmpeg"):
+        ani.save("./output.mp4", writer="ffmpeg", fps=30)
+    elif animation.writers.is_available("imagemagick"):
+        ani.save("./output.mp4", writer="imagemagick", fps=30)
+    elif animation.writers.is_available("pillow"):
+        ani.save("./output.gif", writer="pillow", fps=30)
+    else:
+        raise Exception(
+            "Following writers are not available: ffmpeg, imagemagick, pillow. Can't save animation!"
+        )
