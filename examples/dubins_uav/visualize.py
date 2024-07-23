@@ -126,6 +126,15 @@ cbf_clf_controller = vanilla_cbf_clf_qp_controller(
 # - perturbed by perturbation (on plant, not measurement)
 # - with numerical integration scheme specified by integrator
 # - and data saved out to filepath
+
+# Returns:
+# x: states
+# u: controls
+# z: estimates
+# p: covariances
+# dkeys: data_keys
+# dvalues: data_values
+
 x, u, z, p, dkeys, dvalues = sim.execute(
     x0=INITIAL_STATE,
     dt=DT,
@@ -151,8 +160,8 @@ import matplotlib.pyplot as plt
 
 fig, ax = plt.subplots()
 
-save = False
-animate = True
+save = True
+animate = False
 
 if save:
     ax.plot(x[:, 0], x[:, 1])
