@@ -68,10 +68,10 @@ ACTUATION_LIMITS = jnp.array([1.0])  # Box control input constraint, i.e., -1 <=
 # Dynamics function: dynamics(x) returns f(x), g(x), d(x)
 dynamics = dubins_uav_state_bounds.plant()
 
-taus = [0.5, 0.5]
+taus = [5.0, 5.0]
 
-upper = -2
-lower = 2
+upper = 2
+lower = -2
 
 ### This code accomplishes the following:
 # - passes the parameters cx, cy, r, tau to the generic (unspecified) candidate CBF to create a specific one
@@ -131,6 +131,15 @@ cbf_clf_controller = vanilla_cbf_clf_qp_controller(
 # - perturbed by perturbation (on plant, not measurement)
 # - with numerical integration scheme specified by integrator
 # - and data saved out to filepath
+
+# Returns:
+# x: states
+# u: controls
+# z: estimates
+# p: covariances
+# dkeys: data_keys
+# dvalues: data_values
+
 x, u, z, p, dkeys, dvalues = sim.execute(
     x0=INITIAL_STATE,
     dt=DT,
@@ -156,13 +165,11 @@ import matplotlib.pyplot as plt
 
 fig, ax = plt.subplots()
 
-y_upper = np.full(len(x), upper)
-y_lower = np.full(len(x), lower)
-print(x[:, 0].shape)
-print(y_upper.shape)
+y_upper = np.full(N_STEPS, upper)
+y_lower = np.full(N_STEPS, lower)
 
-ax.plot(x[:, 0], y_upper, color="blue")
-ax.plot(x[:, 0], y_lower, color="blue")
+ax.plot(np.linspace(0, TF, N_STEPS), y_upper, color="blue")
+ax.plot(np.linspace(0, TF, N_STEPS), y_lower, color="blue")
 
 save = True
 animate = False
