@@ -161,3 +161,7 @@ tests/test_models/generated
 
 # Folders generated when testing tutorials
 tutorials/tutorials
+
+# Folders generate for dubins examples
+examples/dubins_uav/src
+examples/dubins_uav/tutorials
