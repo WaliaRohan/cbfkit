@@ -136,6 +136,8 @@ cbf_clf_controller = vanilla_cbf_clf_qp_controller(
 # dvalues: data_values
 # (dkeys, dvalues) are returned by cbf_clf_qp_generator.jittable_controller in:
 #       cbfkit.controllers.model_based.cbf_clf_controllers.cbf_clf_qp_generator
+# Usually this data is returned by the controller in:
+#                           cbfkit.simulation.simulator.stepper()
 
 x, u, z, p, dkeys, dvalues = sim.execute(
     x0=INITIAL_STATE,
