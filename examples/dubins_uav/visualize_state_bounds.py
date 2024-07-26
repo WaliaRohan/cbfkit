@@ -62,13 +62,13 @@ SAVE_FILE = f"tutorials/{model_name}/simulation_data"
 DT = 1e-2
 TF = 10.0
 N_STEPS = int(TF / DT) + 1
-INITIAL_STATE = jnp.array([0.0, 1.9, 0.0, 1.0])
+INITIAL_STATE = jnp.array([0.0, 1.5, 0.0, 1.0])
 ACTUATION_LIMITS = jnp.array([1.0])  # Box control input constraint, i.e., -1 <= u <= 1
 
 # Dynamics function: dynamics(x) returns f(x), g(x), d(x)
 dynamics = dubins_uav_state_bounds.plant()
 
-taus = [5.0, 5.0]
+taus = [50.0, 50.0]
 
 upper = 2
 lower = -2
@@ -83,22 +83,22 @@ lower = -2
 barriers = [
     rectify_relative_degree(
         function=dubins_uav_state_bounds.certificate_functions.barrier_functions.barrier_1.cbf(
-            left=upper, tau=taus[0]
+            lower=lower, tau=taus[0]
         ),
         system_dynamics=dynamics,
         state_dim=len(INITIAL_STATE),
         form="exponential",
         roots=jnp.array([-1.0, -1.0, -1.0]),
-    )(certificate_conditions=zeroing_barriers.linear_class_k(2.0), left=upper, tau=taus[0]),
+    )(certificate_conditions=zeroing_barriers.linear_class_k(2.0), lower=lower, tau=taus[0]),
     rectify_relative_degree(
         function=dubins_uav_state_bounds.certificate_functions.barrier_functions.barrier_2.cbf(
-            right=lower, tau=taus[1]
+            upper=upper, tau=taus[1]
         ),
         system_dynamics=dynamics,
         state_dim=len(INITIAL_STATE),
         form="exponential",
         roots=jnp.array([-1.0, -1.0, -1.0]),
-    )(certificate_conditions=zeroing_barriers.linear_class_k(2.0), right=lower, tau=taus[1]),
+    )(certificate_conditions=zeroing_barriers.linear_class_k(2.0), upper=upper, tau=taus[1]),
 ]
 barrier_packages = concatenate_certificates(*barriers)
 ###

@@ -64,14 +64,17 @@ params["controller"] = {"kv: float": 1.0}
 # candidate_cbfs = [f"({hdot}) * tau + {h}"]
 # params["cbf"] = [{"cx: float": 1.0, "cy: float": 1.0, "r: float": 1.0, "tau: float": 1.0}]
 
-h_left = f"x[1] - left"
-h_right = f"right - x[1]"
+h_lower = f"x[1] - lower"
+h_upper = f"upper - x[1]"
 
-h_dot_left = f"{f[1]}"
-h_dot_right = f"-{f[1]}"
+h_dot_lower = f"{f[1]}"
+h_dot_upper = f"-{f[1]}"
 
-candidate_cbfs = [f"({h_dot_left}) * tau + {h_left}", f"({h_dot_right}) * tau + {h_right}"]
-params["cbf"] = [{"left: float": 1.0, "tau: float": 1.0}, {"right: float": 1.0, "tau: float": 1.0}]
+candidate_cbfs = [f"({h_dot_lower}) * tau + {h_lower}", f"({h_dot_upper}) * tau + {h_upper}"]
+params["cbf"] = [
+    {"lower: float": -1.0, "tau: float": 1.0},
+    {"upper: float": 1.0, "tau: float": 1.0},
+]
 ### Generate New Code
 
 # Directory and name for generated model
