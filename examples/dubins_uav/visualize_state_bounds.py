@@ -183,7 +183,16 @@ if save:
     ax.plot(x[:, 0], x[:, 1])
 
     # plt.show()
-    plt.savefig("output.png")
+    plt.savefig(model_name + " system_trajectory" + ".png")
+
+    # Extract values of 'bfs' key from the dictionaries at index 3 in each sublist
+    bfs_values = [
+        data_dict["bfs"] for sublist in dvalues if "bfs" in sublist[3] for data_dict in [sublist[3]]
+    ]
+
+    fig2, ax2 = plt.subplots()
+    ax2.plot(x[:, 0], bfs_values)
+    plt.savefig(model_name + " barrier_function_values" + ".png")
 
 if animate:
     (line,) = ax.plot([], [], lw=5)
