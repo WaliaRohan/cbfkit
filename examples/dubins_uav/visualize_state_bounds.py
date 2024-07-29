@@ -33,10 +33,12 @@ from cbfkit.controllers.model_based.cbf_clf_controllers.utils.rectify_relative_d
     rectify_relative_degree,
 )
 
-# Assuming perfect, complete state information
-from cbfkit.sensors import perfect as sensor
+# Perfect and imperfect sensors
+from cbfkit.sensors import perfect as perfect_sensor
+from cbfkit.sensors import unbiased_gaussian_noise as noisy_sensor
 
-# With perfect sensing, we can use a naive estimate of the state
+
+# Perfect state estimation
 from cbfkit.estimators import naive as estimator
 
 # Use forward-Euler numerical integration scheme
@@ -153,7 +155,7 @@ x, u, z, p, dkeys, dvalues = sim.execute(
     perturbation=generate_stochastic_perturbation(sigma=sigma, dt=DT),
     integrator=integrator,
     controller=cbf_clf_controller,
-    sensor=sensor,
+    sensor=perfect_sensor,
     estimator=estimator,
     filepath=SAVE_FILE,
 )
@@ -168,10 +170,13 @@ import matplotlib.animation as animation
 
 import matplotlib.pyplot as plt
 
+total_time = DT * len(x)
+
+print("Total time: ", total_time)
+
 fig, ax = plt.subplots()
 ax.set_xlabel("X (m)")
 ax.set_ylabel("Y (m)")
-total_time = DT * N_STEPS
 ax.set_title(f"System Trajectory (T = {total_time:.2f} s)")
 
 y_upper = np.full(N_STEPS, upper)
@@ -194,11 +199,8 @@ if save:
         data_dict["bfs"] for sublist in dvalues if "bfs" in sublist[3] for data_dict in [sublist[3]]
     ]
 
-    print(N_STEPS)
-    print(len(bfs_values))
-
     fig2, ax2 = plt.subplots()
-    time_steps = np.linspace(0, total_time, N_STEPS)
+    time_steps = np.linspace(0, total_time, len(x))
     ax2.plot(time_steps, bfs_values)
     ax2.set_xlabel("Time (s)")
     ax2.set_ylabel("CBF Values")
