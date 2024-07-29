@@ -60,7 +60,7 @@ from models import dubins_uav_state_bounds
 # Simulation Parameters
 SAVE_FILE = f"tutorials/{model_name}/simulation_data"
 DT = 1e-2
-TF = 10.0
+TF = 40.0
 N_STEPS = int(TF / DT) + 1
 INITIAL_STATE = jnp.array([0.0, 1.5, 0.0, 1.0])
 ACTUATION_LIMITS = jnp.array([1.0])  # Box control input constraint, i.e., -1 <= u <= 1
@@ -169,6 +169,10 @@ import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 
 fig, ax = plt.subplots()
+ax.set_xlabel("X (m)")
+ax.set_ylabel("Y (m)")
+total_time = DT * N_STEPS
+ax.set_title(f"System Trajectory (T = {total_time:.2f} s)")
 
 y_upper = np.full(N_STEPS, upper)
 y_lower = np.full(N_STEPS, lower)
@@ -190,8 +194,15 @@ if save:
         data_dict["bfs"] for sublist in dvalues if "bfs" in sublist[3] for data_dict in [sublist[3]]
     ]
 
+    print(N_STEPS)
+    print(len(bfs_values))
+
     fig2, ax2 = plt.subplots()
-    ax2.plot(x[:, 0], bfs_values)
+    time_steps = np.linspace(0, total_time, N_STEPS)
+    ax2.plot(time_steps, bfs_values)
+    ax2.set_xlabel("Time (s)")
+    ax2.set_ylabel("CBF Values")
+    ax2.set_title("CBF Values")
     plt.savefig(model_name + " barrier_function_values" + ".png")
 
 if animate:
