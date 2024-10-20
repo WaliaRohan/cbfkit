@@ -165,3 +165,6 @@ tutorials/tutorials
 # Folders generate for dubins examples
 examples/dubins_uav/src
 examples/dubins_uav/tutorials
+
+# Any ".old" files - data generated from running experiments
+**/*.old
