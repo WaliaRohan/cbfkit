@@ -1,48 +1,53 @@
-import sys
 import os
+import sys
 
 # Get the current directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
+# Add 'src/cbfkit' to the Python path
+cbfkit_path = os.path.join(current_dir, '..', '..', 'src')
+sys.path.append(cbfkit_path)
+print(current_dir, "------", cbfkit_path)
+
 # Add the parent directory to the system path
 sys.path.append(os.path.join(current_dir, "src"))
 
-from jax import jit
 import jax.numpy as jnp
+from jax import jit
 
 ### Import existing CBFkit code for simulation
 # Provides access to execute (sim.execute)
 import cbfkit.simulation.simulator as sim
 
-# Access to CBF-CLF-QP control law
-from cbfkit.controllers.model_based.cbf_clf_controllers.vanilla_cbf_clf_qp_control_laws import (
-    vanilla_cbf_clf_qp_controller,
+# Suite of zeroing barrier function derivative conditions (forms of Class K functions)
+from cbfkit.controllers.model_based.cbf_clf_controllers.utils.barrier_conditions import (
+    zeroing_barriers,
 )
 
 # Necessary housekeeping for using multiple CBFs/CLFs
 from cbfkit.controllers.model_based.cbf_clf_controllers.utils.certificate_packager import (
     concatenate_certificates,
 )
-
-# Suite of zeroing barrier function derivative conditions (forms of Class K functions)
-from cbfkit.controllers.model_based.cbf_clf_controllers.utils.barrier_conditions import (
-    zeroing_barriers,
-)
 from cbfkit.controllers.model_based.cbf_clf_controllers.utils.rectify_relative_degree import (
     rectify_relative_degree,
 )
 
-# Assuming perfect, complete state information
-from cbfkit.sensors import perfect as sensor
+# Access to CBF-CLF-QP control law
+from cbfkit.controllers.model_based.cbf_clf_controllers.vanilla_cbf_clf_qp_control_laws import (
+    vanilla_cbf_clf_qp_controller,
+)
 
 # With perfect sensing, we can use a naive estimate of the state
 from cbfkit.estimators import naive as estimator
 
-# Use forward-Euler numerical integration scheme
-from cbfkit.utils.numerical_integration import forward_euler as integrator
-
 # To add stochastic perturbation to system dynamics
 from cbfkit.modeling.additive_disturbances import generate_stochastic_perturbation
+
+# Assuming perfect, complete state information
+from cbfkit.sensors import perfect as sensor
+
+# Use forward-Euler numerical integration scheme
+from cbfkit.utils.numerical_integration import forward_euler as integrator
 
 
 @jit
@@ -155,12 +160,11 @@ x, u, z, p, dkeys, dvalues = sim.execute(
 ###################################################################################################
 ## Visualization ##
 
-import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import matplotlib.pyplot as plt
 
 ## Visualization ##
 
-import matplotlib.pyplot as plt
 
 fig, ax = plt.subplots()
 

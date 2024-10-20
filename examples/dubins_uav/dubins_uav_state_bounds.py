@@ -1,5 +1,14 @@
+import os
+import sys
+
 import jax.numpy as jnp
 from jax import Array, jit
+
+# Add 'src/cbfkit' to the Python path
+script_dir = os.path.dirname(os.path.realpath(__file__))
+cbfkit_path = os.path.join(script_dir, '..', '..', 'src')
+sys.path.append(cbfkit_path)
+print(script_dir, "------", cbfkit_path)
 
 # Module for generating code for new dynamics/controllers/cbfs/clfs
 from cbfkit.codegen.create_new_system import generate_model
