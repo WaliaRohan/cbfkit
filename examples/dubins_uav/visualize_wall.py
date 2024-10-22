@@ -47,7 +47,7 @@ from cbfkit.modeling.additive_disturbances import generate_stochastic_perturbati
 
 # Perfect and imperfect sensors
 from cbfkit.sensors import perfect as perfect_sensor
-from cbfkit.sensors import unbiased_gaussian_noise as noisy_sensor
+from cbfkit.sensors import unbiased_gaussian_noise_sd as noisy_sensor
 
 # Use forward-Euler numerical integration scheme
 from cbfkit.utils.numerical_integration import forward_euler as integrator
@@ -149,7 +149,7 @@ x, u, z, p, dkeys, dvalues = sim.execute(
     perturbation=generate_stochastic_perturbation(sigma=sigma, dt=DT),
     integrator=integrator,
     controller=cbf_clf_controller,
-    sensor=perfect_sensor,
+    sensor=noisy_sensor,
     estimator=estimator,
     filepath=SAVE_FILE,
 )

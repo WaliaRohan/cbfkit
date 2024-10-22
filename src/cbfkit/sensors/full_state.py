@@ -109,4 +109,7 @@ def unbiased_gaussian_noise_sd(
 
     sampled_random_vector = jnp.mean(jnp.dot(chol, normal_samples.T), axis=1)
 
-    return x + jnp.mean(sampled_random_vector)
+    new_x = x
+    new_x = x.at[1].set(x[1] + jnp.mean(sampled_random_vector))
+
+    return new_x
