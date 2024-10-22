@@ -61,10 +61,11 @@ params["controller"] = {"kv: float": 1.0}
 
 # Define h, hdot
 h = f"d - x[0]"
-hdot = f"{f[0]}"
+hdot = f"-{f[0]}"
 
 # Specify candidate CBF and params
-candidate_cbfs = [f"({hdot}) * tau + {h}"]
+# candidate_cbfs = [f"({hdot}) * tau + {h}"]
+candidate_cbfs = [f"{h}"]
 params["cbf"] = [{"d: float": 1.0, "tau: float": 1.0}]
 
 ### Generate New Code

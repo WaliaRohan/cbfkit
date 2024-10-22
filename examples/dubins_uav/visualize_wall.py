@@ -69,7 +69,7 @@ SAVE_FILE = f"tutorials/{model_name}/simulation_data"
 DT = 1e-2
 TF = 40.0
 N_STEPS = int(TF / DT) + 1
-INITIAL_STATE = jnp.array([0.0, 1.5, 0.0, 1.0])
+INITIAL_STATE = jnp.array([0.0, 1.5, 0.0, 0.1])
 ACTUATION_LIMITS = jnp.array([1.0])  # Box control input constraint, i.e., -1 <= u <= 1
 
 # Dynamics function: dynamics(x) returns f(x), g(x), d(x)
@@ -101,7 +101,7 @@ barrier_packages = concatenate_certificates(*barriers)
 
 # Change this to True if you want the linear gain in the CBF condition's class K function
 # to be a decision variable in the optimization problem
-optimized_alpha = True
+optimized_alpha = False
 
 # Instantiate nominal controller
 kv = 40.0  # control gain defined in previous expression
