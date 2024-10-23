@@ -69,14 +69,14 @@ SAVE_FILE = f"tutorials/{model_name}/simulation_data"
 DT = 1e-2
 TF = 40.0
 N_STEPS = int(TF / DT) + 1
-INITIAL_STATE = jnp.array([0.0, 1.5, 0.0, 0.1])
+INITIAL_STATE = jnp.array([0.0, 10.0, np.radians(245), 1.0])
 ACTUATION_LIMITS = jnp.array([1.0])  # Box control input constraint, i.e., -1 <= u <= 1
 
 # Dynamics function: dynamics(x) returns f(x), g(x), d(x)
 dynamics = dubins_uav_wall.plant()
 
 tau = 10.0
-wall_x = 5.0
+wall_x = 1.0
 
 ### This code accomplishes the following:
 # - passes the parameters cx, cy, r, tau to the generic (unspecified) candidate CBF to create a specific one
@@ -104,7 +104,7 @@ barrier_packages = concatenate_certificates(*barriers)
 optimized_alpha = False
 
 # Instantiate nominal controller
-kv = 40.0  # control gain defined in previous expression
+kv = 10.0  # control gain defined in previous expression
 nominal_controller = dubins_uav_wall.controllers.controller_1(kv=kv)
 
 ### Instantiate CBF-CLF-QP control law
@@ -112,7 +112,7 @@ cbf_clf_controller = vanilla_cbf_clf_qp_controller(
     control_limits=ACTUATION_LIMITS,
     nominal_input=nominal_controller,
     dynamics_func=dynamics,
-    barriers=barrier_packages,
+    # barriers=barrier_packages,
     tunable_class_k=optimized_alpha,
 )
 
@@ -173,7 +173,7 @@ ax.set_ylabel("Y (m)")
 ax.set_title(f"System Trajectory (T = {total_time:.2f} s)")
 
 # Plot a vertical line at x = wall_x
-ax.axvline(x=wall_x, color='black', linestyle='--')
+ax.axhline(y=wall_x, color='black', linestyle='--')
 
 save = True
 animate = False
