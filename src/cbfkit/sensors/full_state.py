@@ -83,6 +83,10 @@ def unbiased_gaussian_noise_sd(
         y (Array): measurement of full state vector
 
     """
+
+    variance = jnp.log(x[1])
+    std_dev = jnp.sqrt(variance)
+
     if sigma is None:
         sigma = 0.1 * jnp.eye((len(x)))
 
@@ -99,7 +103,7 @@ def unbiased_gaussian_noise_sd(
     normal_samples = jnp.zeros((max_iter, dim))
     for ii in range(max_iter):
         key, subkey = random.split(key)
-        normal_samples = normal_samples.at[ii, :].set(random.normal(subkey, shape=(dim,)))
+        normal_samples = normal_samples.at[ii, :].set(std_dev * random.normal(subkey, shape=(dim,)))
 
     # Apply Cholesky decomposition to convert the unit variance vector to the desired covariance matrix
     if jnp.trace(abs(sigma)) > 0:
@@ -110,6 +114,9 @@ def unbiased_gaussian_noise_sd(
     sampled_random_vector = jnp.mean(jnp.dot(chol, normal_samples.T), axis=1)
 
     new_x = x
-    new_x = x.at[1].set(x[1] + jnp.mean(sampled_random_vector))
+    if not jnp.isnan(jnp.mean(sampled_random_vector)):
+        new_x = x.at[1].set(x[1] + jnp.mean(sampled_random_vector))
+
+    print(new_x)
 
     return new_x
