@@ -1,6 +1,8 @@
 import os
 import sys
 
+import numpy as np
+
 # Get the current directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -165,8 +167,12 @@ import matplotlib.pyplot as plt
 
 ## Visualization ##
 
+total_time = DT * len(x)
 
 fig, ax = plt.subplots()
+ax.set_xlabel("X (m)")
+ax.set_ylabel("Y (m)")
+ax.set_title(f"System Trajectory (T = {total_time:.2f} s)")
 
 save = True
 animate = False
@@ -184,8 +190,53 @@ if save:
             )
         )
 
-    # plt.show()
-    plt.savefig("output.png")
+    fig.savefig(model_name + " system_trajectory" + ".png")
+
+    # Plot CBF values
+    fig2, ax2 = plt.subplots()
+    time_steps = np.linspace(0, total_time, len(x))
+    # Extract values of 'bfs' key from the dictionaries at index 3 in each sublist
+    bfs_values = [
+        data_dict["bfs"] for sublist in dvalues if "bfs" in sublist[3] for data_dict in [sublist[3]]
+    ]
+    ax2.plot(time_steps, bfs_values)
+    ax2.set_xlabel("Time (s)")
+    ax2.set_ylabel("CBF Values")
+    ax2.set_title("CBF Values")
+    fig2.savefig(model_name + " barrier_function_values" + ".png")
+
+    # Plot nominal and actual control effort
+    fig3, ax3 = plt.subplots()
+    u = [sublist[4] for sublist in dvalues]
+    u_nom = [sublist[5][0] for sublist in dvalues]
+    ax3.plot(time_steps, u_nom, marker=".", linestyle="--", color="r", label="u_nom", markersize=6)
+    ax3.plot(time_steps, u, marker=".", linestyle="-", color="b", label="u", markersize=1)
+    ax3.set_xlabel("Time (s)")
+    ax3.set_ylabel("Control Input Values")
+    ax3.set_title("Control Input")
+    ax3.legend()
+    fig3.savefig(model_name + " control_values" + ".png")
+
+    # Plot difference in control efforts
+    difference = [ui_nom - ui for ui_nom, ui in zip(u_nom, u)]
+
+    fig4, ax4 = plt.subplots()
+    ax4.plot(
+        time_steps,
+        difference,
+        marker="o",
+        linestyle="-",
+        color="g",
+        label="u_nom - u",
+        markersize=1,
+    )
+    ax4.set_xlabel("Time (s)")
+    ax4.set_ylabel("Difference")
+    ax4.set_title("Difference between u_nom and u")
+    ax4.legend()
+
+    # Save the plots
+    fig4.savefig(model_name + " control_values_diff" + ".png")
 
 if animate:
     (line,) = ax.plot([], [], lw=5)
