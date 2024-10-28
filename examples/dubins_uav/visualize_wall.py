@@ -69,7 +69,7 @@ SAVE_FILE = f"tutorials/{model_name}/simulation_data"
 DT = 1e-2
 TF = 40.0
 N_STEPS = int(TF / DT) + 1
-INITIAL_STATE = jnp.array([0.0, 10.0, np.radians(245), 1.0])
+INITIAL_STATE = jnp.array([0.0, 20.0, np.radians(245), 1.0])
 ACTUATION_LIMITS = jnp.array([1.0])  # Box control input constraint, i.e., -1 <= u <= 1
 
 # Dynamics function: dynamics(x) returns f(x), g(x), d(x)
@@ -85,6 +85,25 @@ wall_x = 1.0
 #       using exponential CBF principles
 # - specifies the type of CBF condition to enforce (in this case a zeroing CBF condition with a linear class K func)
 # - then packages the (two, in this case) barrier functions into one object for the controller to use
+# barriers = [
+#     rectify_relative_degree(
+#         function=dubins_uav_wall.certificate_functions.barrier_functions.barrier_1.cbf(
+#             d = wall_x, tau=tau
+#         ),
+#         system_dynamics=dynamics,
+#         state_dim=len(INITIAL_STATE),
+#         form="exponential",
+#         roots=jnp.array([-1.0, -1.0, -1.0]),
+#     )(certificate_conditions=zeroing_barriers.linear_class_k(2.0), d = wall_x, tau=tau),
+# ]
+
+# CertificateCollection = Tuple[
+#     List[CertificateCallable],
+#     List[CertificateJacobianCallable],
+#     List[CertificateHessianCallable],
+#     List[CertificatePartialCallable],
+#     List[CertificateConditionsCallable],
+# ]
 barriers = [
     rectify_relative_degree(
         function=dubins_uav_wall.certificate_functions.barrier_functions.barrier_1.cbf(
@@ -104,7 +123,7 @@ barrier_packages = concatenate_certificates(*barriers)
 optimized_alpha = False
 
 # Instantiate nominal controller
-kv = 10.0  # control gain defined in previous expression
+kv = 1.0  # control gain defined in previous expression
 nominal_controller = dubins_uav_wall.controllers.controller_1(kv=kv)
 
 ### Instantiate CBF-CLF-QP control law
@@ -112,7 +131,7 @@ cbf_clf_controller = vanilla_cbf_clf_qp_controller(
     control_limits=ACTUATION_LIMITS,
     nominal_input=nominal_controller,
     dynamics_func=dynamics,
-    # barriers=barrier_packages,
+    barriers=barrier_packages,
     tunable_class_k=optimized_alpha,
 )
 
@@ -141,7 +160,7 @@ cbf_clf_controller = vanilla_cbf_clf_qp_controller(
 #                           cbfkit.simulation.simulator.stepper()
 
 
-x, u, z, p, dkeys, dvalues = sim.execute(
+x, u, z, p, dkeys, dvalues, measurements = sim.execute(
     x0=INITIAL_STATE,
     dt=DT,
     num_steps=N_STEPS,
@@ -153,6 +172,9 @@ x, u, z, p, dkeys, dvalues = sim.execute(
     estimator=estimator,
     filepath=SAVE_FILE,
 )
+
+print("State: ", x[0])
+print("Measurement: ", measurements[0])
 
 ###################################################################################################
 ## Visualization ##
@@ -178,10 +200,20 @@ ax.axhline(y=wall_x, color='black', linestyle='--')
 save = True
 animate = False
 
-if save:
-    ax.plot(x[:, 0], x[:, 1])
+print()
 
-    # plt.show()
+if save:
+
+    ax.plot(x[:, 0], x[:, 1], label='True Trajectory')
+    measurements = np.array(measurements)
+
+    if len(x) == len(measurements):
+        # Plot measurements
+        ax.plot(measurements[:, 0], measurements[:, 1], label='Measured Trajectory', linewidth=0.5)
+        # Optionally add a legend to differentiate the data
+        ax.legend()
+
+    
     fig.savefig(model_name + " system_trajectory" + ".png")
 
     # Plot CBF values
@@ -191,11 +223,13 @@ if save:
     bfs_values = [
         data_dict["bfs"] for sublist in dvalues if "bfs" in sublist[3] for data_dict in [sublist[3]]
     ]
-    ax2.plot(time_steps, bfs_values)
-    ax2.set_xlabel("Time (s)")
-    ax2.set_ylabel("CBF Values")
-    ax2.set_title("CBF Values")
-    fig2.savefig(model_name + " barrier_function_values" + ".png")
+
+    if len(bfs_values) > 0:
+        ax2.plot(time_steps, bfs_values)
+        ax2.set_xlabel("Time (s)")
+        ax2.set_ylabel("CBF Values")
+        ax2.set_title("CBF Values")
+        fig2.savefig(model_name + " barrier_function_values" + ".png")
 
     # Plot nominal and actual control effort
     fig3, ax3 = plt.subplots()
@@ -230,6 +264,18 @@ if save:
     # Save the plots
     fig4.savefig(model_name + " control_values_diff" + ".png")
 
+    fig5, ax5 = plt.subplots()
+    ax5.plot(time_steps, x[:, 0], label='True X')
+    ax5.plot(time_steps, measurements[:, 0], label='Measured X', linewidth=0.5)
+    ax5.legend()
+    fig5.savefig(model_name + " true_vs_measured_x" + ".png")
+
+    fig6, ax6 = plt.subplots()
+    ax6.plot(time_steps, x[:, 1], label='True Y')
+    ax6.plot(time_steps, measurements[:, 1], label='Measured Y', linewidth=0.5)
+    ax6.legend()
+    fig6.savefig(model_name + " true_vs_measured_Y" + ".png")
+    
 
 if animate:
     (line,) = ax.plot([], [], lw=5)

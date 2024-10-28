@@ -61,7 +61,7 @@ params["controller"] = {"kv: float": 1.0}
 
 # Define h, hdot
 h = f"x[1] - d"
-hdot = f"-{f[0]}"
+hdot = f"{f[1]}"
 
 # Specify candidate CBF and params
 # candidate_cbfs = [f"({hdot}) * tau + {h}"]
