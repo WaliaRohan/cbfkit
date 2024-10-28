@@ -57,16 +57,13 @@ nominal_control_law = (
 )
 params["controller"] = {"kv: float": 1.0}
 
-### Candidate CBF: hdot * tau + h for h = dx**2 + dy**2 - r**2
-
 # Define h, hdot
 h = f"x[1] - d"
 hdot = f"{f[1]}"
 
 # Specify candidate CBF and params
-# candidate_cbfs = [f"({hdot}) * tau + {h}"]
 candidate_cbfs = [f"{h}"]
-params["cbf"] = [{"d: float": 1.0, "tau: float": 1.0}]
+params["cbf"] = [{"d: float": 1.0}]
 
 ### Generate New Code
 

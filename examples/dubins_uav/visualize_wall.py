@@ -26,6 +26,9 @@ from cbfkit.controllers.model_based.cbf_clf_controllers.utils.barrier_conditions
     zeroing_barriers,
 )
 
+# Import dubins_uav_wall barrier function package
+import src.models.dubins_uav_wall.certificate_functions.barrier_functions.barrier_1 as barrier_certificate
+
 # Necessary housekeeping for using multiple CBFs/CLFs
 from cbfkit.controllers.model_based.cbf_clf_controllers.utils.certificate_packager import (
     concatenate_certificates,
@@ -75,7 +78,6 @@ ACTUATION_LIMITS = jnp.array([1.0])  # Box control input constraint, i.e., -1 <=
 # Dynamics function: dynamics(x) returns f(x), g(x), d(x)
 dynamics = dubins_uav_wall.plant()
 
-tau = 10.0
 wall_x = 1.0
 
 ### This code accomplishes the following:
@@ -105,15 +107,9 @@ wall_x = 1.0
 #     List[CertificateConditionsCallable],
 # ]
 barriers = [
-    rectify_relative_degree(
-        function=dubins_uav_wall.certificate_functions.barrier_functions.barrier_1.cbf(
-            d = wall_x, tau=tau
-        ),
-        system_dynamics=dynamics,
-        state_dim=len(INITIAL_STATE),
-        form="exponential",
-        roots=jnp.array([-1.0, -1.0, -1.0]),
-    )(certificate_conditions=zeroing_barriers.linear_class_k(2.0), d = wall_x, tau=tau),
+    barrier_certificate.cbf1_package(
+        certificate_conditions=zeroing_barriers.linear_class_k(2.0),
+        d = wall_x)
 ]
 barrier_packages = concatenate_certificates(*barriers)
 ###
@@ -200,6 +196,11 @@ ax.axhline(y=wall_x, color='black', linestyle='--')
 save = True
 animate = False
 
+save_directory = "plots/" + model_name + "/"
+
+if not os.path.exists(save_directory):
+    os.makedirs(save_directory)
+
 print()
 
 if save:
@@ -214,7 +215,7 @@ if save:
         ax.legend()
 
     
-    fig.savefig(model_name + " system_trajectory" + ".png")
+    fig.savefig(save_directory + model_name + " system_trajectory" + ".png")
 
     # Plot CBF values
     fig2, ax2 = plt.subplots()
@@ -229,7 +230,7 @@ if save:
         ax2.set_xlabel("Time (s)")
         ax2.set_ylabel("CBF Values")
         ax2.set_title("CBF Values")
-        fig2.savefig(model_name + " barrier_function_values" + ".png")
+        fig2.savefig(save_directory + model_name + " barrier_function_values" + ".png")
 
     # Plot nominal and actual control effort
     fig3, ax3 = plt.subplots()
@@ -241,7 +242,7 @@ if save:
     ax3.set_ylabel("Control Input Values")
     ax3.set_title("Control Input")
     ax3.legend()
-    fig3.savefig(model_name + " control_values" + ".png")
+    fig3.savefig(save_directory + model_name + " control_values" + ".png")
 
     # Plot difference in control efforts
     difference = [ui_nom - ui for ui_nom, ui in zip(u_nom, u)]
@@ -262,19 +263,19 @@ if save:
     ax4.legend()
 
     # Save the plots
-    fig4.savefig(model_name + " control_values_diff" + ".png")
+    fig4.savefig(save_directory + model_name + " control_values_diff" + ".png")
 
     fig5, ax5 = plt.subplots()
     ax5.plot(time_steps, x[:, 0], label='True X')
     ax5.plot(time_steps, measurements[:, 0], label='Measured X', linewidth=0.5)
     ax5.legend()
-    fig5.savefig(model_name + " true_vs_measured_x" + ".png")
+    fig5.savefig(save_directory + model_name + " true_vs_measured_x" + ".png")
 
     fig6, ax6 = plt.subplots()
     ax6.plot(time_steps, x[:, 1], label='True Y')
     ax6.plot(time_steps, measurements[:, 1], label='Measured Y', linewidth=0.5)
     ax6.legend()
-    fig6.savefig(model_name + " true_vs_measured_Y" + ".png")
+    fig6.savefig(save_directory + model_name + " true_vs_measured_Y" + ".png")
     
 
 if animate:
