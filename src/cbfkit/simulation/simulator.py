@@ -20,22 +20,24 @@ Examples
 
 """
 
-from typing import Any, Dict, Iterator, Optional, Tuple, List, Callable, Union
-from tqdm import tqdm
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Union
+
 import jax.numpy as jnp
-from jax import random, Array
+from jax import Array, random
+from tqdm import tqdm
+
 from cbfkit.utils.logger import log, write_log
 from cbfkit.utils.user_types import (
+    Control,
     ControllerCallable,
+    Covariance,
     DynamicsCallable,
+    Estimate,
     EstimatorCallable,
     IntegratorCallable,
     PerturbationCallable,
     SensorCallable,
     State,
-    Control,
-    Estimate,
-    Covariance,
 )
 
 
@@ -74,7 +76,7 @@ def stepper(
         u: Control,
         z: Estimate,
         c: Covariance,
-    ) -> Tuple[Array, Array, Array, Array, Dict[str, Any]]:
+    ) -> Tuple[Array, Array, Array, Array, Dict[str, Any], Array]:
         """_summary_
 
         Args:
@@ -110,10 +112,10 @@ def stepper(
             u, data = controller(t, z)
             if "error" in data.keys():
                 if data["error"]:
-                    return x, u, z, c, data
+                    return x, u, z, c, data, y
             if "complete" in data.keys():
                 if data["complete"]:
-                    return x, u, z, c, data
+                    return x, u, z, c, data, y
         else:
             u = jnp.zeros((g.shape[1],))
             data = {}
@@ -128,7 +130,7 @@ def stepper(
         # Integrate to generate next step
         x = integrator(x, xdot, dt)
 
-        return x, u, z, c, data
+        return x, u, z, c, data, y
 
     return step
 
@@ -183,7 +185,7 @@ def simulator(
 
     def simulate_iter(
         x: Array,
-    ) -> Iterator[Tuple[Array, Array, Array, Array, List[str], List[Array]]]:
+    ) -> Iterator[Tuple[Array, Array, Array, Array, List[str], List[Array], Array]]:
         # No info on control/estimation
         u = None
         z = None
@@ -196,10 +198,10 @@ def simulator(
 
         # Simulate remaining timesteps
         for s in items:
-            x, u, z, p, data = step(dt * s, x, u, z, p)
+            x, u, z, p, data, y = step(dt * s, x, u, z, p)
             log(data)
 
-            yield x, u, z, p, list(data.keys()), list(data.values())
+            yield x, u, z, p, list(data.keys()), list(data.values()), y
 
             if "complete" in data.keys():
                 if data["complete"]:
@@ -312,5 +314,6 @@ def extract_and_log_data(filepath: str, data):
     covariances = jnp.array([sim_data[3] for sim_data in data])
     data_keys = data[0][4]
     data_values = [sim_data[5] for sim_data in data]
+    measurements = [sim_data[6] for sim_data in data]
 
-    return states, controls, estimates, covariances, data_keys, data_values  # type: ignore[return-value]
+    return states, controls, estimates, covariances, data_keys, data_values, measurements  # type: ignore[return-value]
