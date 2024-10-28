@@ -84,7 +84,7 @@ def unbiased_gaussian_noise_sd(
 
     """
 
-    variance = x[1]
+    variance = jnp.square(x[0])
     std_dev = jnp.sqrt(variance)
 
     if sigma is None:
@@ -117,6 +117,6 @@ def unbiased_gaussian_noise_sd(
     if not jnp.isnan(jnp.mean(sampled_random_vector)):
         new_x = x.at[1].set(x[1] + jnp.mean(sampled_random_vector))
 
-    print(new_x)
+    # print(new_x)
 
     return new_x
