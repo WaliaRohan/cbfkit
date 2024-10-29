@@ -94,7 +94,7 @@ barrier_packages = concatenate_certificates(*barriers)
 
 # Change this to True if you want the linear gain in the CBF condition's class K function
 # to be a decision variable in the optimization problem
-optimized_alpha = False
+optimized_alpha = True
 
 # Instantiate nominal controller
 nominal_controller = single_integrator_2.controllers.controller_1()
