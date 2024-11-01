@@ -15,6 +15,9 @@ print(current_dir, "------", cbfkit_path)
 sys.path.append(os.path.join(current_dir, "src"))
 
 import jax.numpy as jnp
+
+# Import single_integrator_2 barrier function package
+import src.models.single_integrator_2.certificate_functions.barrier_functions.barrier_1 as barrier_certificate
 from jax import jit
 
 ### Import existing CBFkit code for simulation
@@ -25,9 +28,6 @@ import cbfkit.simulation.simulator as sim
 from cbfkit.controllers.model_based.cbf_clf_controllers.utils.barrier_conditions import (
     zeroing_barriers,
 )
-
-# Import single_integrator_2 barrier function package
-import src.models.single_integrator_2.certificate_functions.barrier_functions.barrier_1 as barrier_certificate
 
 # Necessary housekeeping for using multiple CBFs/CLFs
 from cbfkit.controllers.model_based.cbf_clf_controllers.utils.certificate_packager import (
@@ -69,7 +69,7 @@ from models import single_integrator_2
 
 # Simulation Parameters
 SAVE_FILE = f"tutorials/{model_name}/simulation_data"
-DT = 1e-2
+DT = 1e-2 # use 10^-3 or 10^-4
 TF = 40.0
 N_STEPS = int(TF / DT) + 1
 INITIAL_STATE = jnp.array([0.0])
@@ -78,7 +78,7 @@ ACTUATION_LIMITS = jnp.array([1.0])  # Box control input constraint, i.e., -1 <=
 # Dynamics function: dynamics(x) returns f(x), g(x), d(x)
 dynamics = single_integrator_2.plant()
 
-wall_x = 1.0
+wall_x = 9.0
 
 ### This code accomplishes the following:
 # - passes the parameters cx, cy, r, tau to the generic (unspecified) candidate CBF to create a specific one
@@ -100,7 +100,7 @@ wall_x = 1.0
 # ]
 barriers = [
     barrier_certificate.cbf1_package(
-        certificate_conditions=zeroing_barriers.linear_class_k(2.0),
+        certificate_conditions=zeroing_barriers.linear_class_k(0.1),
         d = wall_x)
 ]
 barrier_packages = concatenate_certificates(*barriers)
@@ -119,7 +119,7 @@ cbf_clf_controller = vanilla_cbf_clf_qp_controller(
     control_limits=ACTUATION_LIMITS,
     nominal_input=nominal_controller,
     dynamics_func=dynamics,
-    # barriers=barrier_packages,
+    barriers=barrier_packages,
     tunable_class_k=optimized_alpha,
 )
 
@@ -179,6 +179,15 @@ ax.set_xlabel("X (m)")
 ax.set_ylabel("Y (m)")
 ax.set_title(f"System Trajectory (T = {total_time:.2f} s)")
 
+# Define start and goal coordinates
+x_d = 10.0
+start = (INITIAL_STATE[0], 0)
+goal = (x_d, 0)
+
+# Plotting
+ax.plot(start[0], start[1], 'go', label='Start')  # Start as a green circle
+ax.plot(goal[0], goal[1], 'ro', label='Goal')  # Goal as a red circle
+
 # Plot a vertical line at x = wall_x
 ax.axvline(x=wall_x, color='black', linestyle='--')
 
@@ -189,6 +198,9 @@ save_directory = "plots/" + model_name + "/"
 
 if not os.path.exists(save_directory):
     os.makedirs(save_directory)
+
+text_str = f"Final true X: {x[-1]}\nFinal measured x: {measurements[-1]}"
+
 
 if save:
 
@@ -203,6 +215,8 @@ if save:
         ax.plot(measurements, y, label='Measured Trajectory', linewidth=0.5)
         # Optionally add a legend to differentiate the data
         ax.legend()
+        # ax.text(0.05, 0.95, text_str, transform=ax.transAxes, fontsize=10,
+        # verticalalignment='top', bbox=dict(boxstyle="round,pad=0.3", edgecolor="black", facecolor="lightgrey"))
 
     
     fig.savefig(save_directory + model_name + " system_trajectory" + ".png")
@@ -255,12 +269,18 @@ if save:
     # Save the plots
     fig4.savefig(save_directory + model_name + " control_values_diff" + ".png")
 
-    fig5, ax5 = plt.subplots()
+    fig5, ax5 = plt.subplots(layout="constrained")
     ax5.plot(time_steps, x[:, 0], label='True X')
     ax5.plot(time_steps, measurements[:, 0], label='Measured X', linewidth=0.5)
     ax5.legend()
+    ax5.set_xlabel("Time (s)")
+    ax5.set_ylabel("X (m)")
+    ax5.set_title("True vs Measured X")
+    # plt.gcf().text(0.95, 1.02, text_str, fontsize=10, verticalalignment='top', 
+    #            horizontalalignment='right', bbox=dict(boxstyle="round,pad=0.3", edgecolor="black", facecolor="lightgrey"))
     fig5.savefig(save_directory + model_name + " true_vs_measured_x" + ".png")
     
+    print(x[-1], measurements[-1])
 
 if animate:
     (line,) = ax.plot([], [], lw=5)

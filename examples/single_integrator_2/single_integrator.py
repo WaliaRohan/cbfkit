@@ -41,9 +41,8 @@ nominal_control_law = (
 )
 # params["controller"] = {"kv: float": 1.0}
 
-# Define h, hdot
-h = f"x[0] - d"
-hdot = f"{f[0]}"
+# Define h  
+h = f"d - x[0]"
 
 # Specify candidate CBF and params
 candidate_cbfs = [f"{h}"]
@@ -73,3 +72,7 @@ generate_model.generate_model(
     nominal_controller=nominal_control_law,
     params=params,
 )
+
+
+In the data (dict) of what the controller returns (i.e., u, data = controller(t, x)), there should be a field called 'sol' that contains the values of alpha when optimize_alpha is true
+sol is an array consisting of [u, alphas]

@@ -70,6 +70,7 @@ def unbiased_gaussian_noise_sd(
     x: Array,
     sigma: Optional[Union[Array, None]] = None,
     key: Optional[Union[random.PRNGKey, None]] = None,
+    dimension=1
 ) -> Array:
     """Senses the state subject to additive, unbiased (zero-mean), Gaussian
     noise.
@@ -84,7 +85,7 @@ def unbiased_gaussian_noise_sd(
 
     """
 
-    variance = jnp.square(x[0])
+    variance = 0.01*jnp.square(x[0])
     std_dev = jnp.sqrt(variance)
 
     if sigma is None:
@@ -114,8 +115,13 @@ def unbiased_gaussian_noise_sd(
     sampled_random_vector = jnp.mean(jnp.dot(chol, normal_samples.T), axis=1)
 
     new_x = x
+
+    # print("sampled_random_vector: ", sampled_random_vector)
+    # print("Mean of sampled_random_vector: ", jnp.mean(sampled_random_vector))
+
     if not jnp.isnan(jnp.mean(sampled_random_vector)):
-        new_x = x.at[1].set(x[1] + jnp.mean(sampled_random_vector))
+        # print("Sample vector is not nan")
+        new_x = x.at[0].set(x[0] + jnp.mean(sampled_random_vector))
 
     # print(new_x)
 
