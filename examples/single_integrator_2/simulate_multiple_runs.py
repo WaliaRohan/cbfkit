@@ -157,9 +157,9 @@ if __name__=="__main__":
     wall_x = 9.0
     class_k_gain = 0.2
 
-    runs = 100
+    runs = 1000
     start_run = 1
-    end_run = 20
+    end_run = 10
 
     base_key_seed = 0
     base_key = random.PRNGKey(base_key_seed)  # Starting key
