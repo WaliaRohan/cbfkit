@@ -74,5 +74,5 @@ generate_model.generate_model(
 )
 
 
-In the data (dict) of what the controller returns (i.e., u, data = controller(t, x)), there should be a field called 'sol' that contains the values of alpha when optimize_alpha is true
-sol is an array consisting of [u, alphas]
+# In the data (dict) of what the controller returns (i.e., u, data = controller(t, x)), there should be a field called 'sol' that contains the values of alpha when optimize_alpha is true
+# sol is an array consisting of [u, alphas]
