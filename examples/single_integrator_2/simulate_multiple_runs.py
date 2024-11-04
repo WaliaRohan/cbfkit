@@ -67,13 +67,11 @@ def sigma(x):
     # return jnp.array([[0, 0], [0, 0.05 * x[0]]])  # State-dependent diffusion term in SDE
     return jnp.zeros((1, 1))
 
+# Import newly generated Dubins UAV code
+from models import single_integrator_2
+model_name = "single_integrator_2"
 
 def simulate(key, initial_state, wall_x, DT, TF, class_k_gain, filepath):
-
-    model_name = "single_integrator_2"
-
-    # Import newly generated Dubins UAV code
-    from models import single_integrator_2
 
     # Simulation Parameters
     # SAVE_FILE = f"tutorials/{model_name}/simulation_data"
@@ -154,7 +152,7 @@ if __name__=="__main__":
     DT = 1e-3 # use 10^-3 or 10^-4
     TF = 20.0
     initial_state = jnp.array([0.0])
-    wall_x = 9.0
+    wall_x = 3.0
     class_k_gain = 0.2
 
     runs = 1000
@@ -229,11 +227,16 @@ if __name__=="__main__":
         measured_run_violation_ratio = total_measured_run_violations / len(x) if len(x) > 0 else 0  # Avoid division by zero
         measured_violation_ratios.append(measured_run_violation_ratio)  # Append the ratio to the ratios list
 
+        print("Actual run violations: ", total_actual_run_violations)
+        print("Measured run violations: ", total_measured_run_violations)
+
         if len(actual_run_violations) > 0 and max(actual_run_violations) > max_actual_violation:
             max_actual_violation = max(actual_run_violations)
+            print("Max actual violation: ", max(actual_run_violations))
 
         if len(measured_run_violations) > 0 and max(measured_run_violations) > max_measured_violation:
             max_measured_violation = max(measured_run_violations)
+            print("Max measured violation: ", max(measured_run_violations))
 
         results = np.hstack((time_steps, x, u, z, measurements, u_nom, bfs_values))
 
