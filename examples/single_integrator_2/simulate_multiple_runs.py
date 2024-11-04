@@ -68,7 +68,7 @@ def sigma(x):
     return jnp.zeros((1, 1))
 
 
-def simulate(key, initial_state, wall_x, DT, TF, class_k_gain):
+def simulate(key, initial_state, wall_x, DT, TF, class_k_gain, filepath):
 
     model_name = "single_integrator_2"
 
@@ -76,7 +76,7 @@ def simulate(key, initial_state, wall_x, DT, TF, class_k_gain):
     from models import single_integrator_2
 
     # Simulation Parameters
-    SAVE_FILE = f"tutorials/{model_name}/simulation_data"
+    # SAVE_FILE = f"tutorials/{model_name}/simulation_data"
     N_STEPS = int(TF / DT) + 1
     INITIAL_STATE = initial_state
     ACTUATION_LIMITS = jnp.array([1.0])  # Box control input constraint, i.e., -1 <= u <= 1
@@ -145,7 +145,7 @@ def simulate(key, initial_state, wall_x, DT, TF, class_k_gain):
         controller=cbf_clf_controller,
         sensor=noisy_sensor,
         estimator=estimator,
-        filepath=SAVE_FILE,
+        filepath=filepath,
         key=key
     )
 
@@ -157,9 +157,9 @@ if __name__=="__main__":
     wall_x = 9.0
     class_k_gain = 0.2
 
-    runs = 5
+    runs = 100
     start_run = 1
-    end_run = 100
+    end_run = 20
 
     base_key_seed = 0
     base_key = random.PRNGKey(base_key_seed)  # Starting key
@@ -186,13 +186,16 @@ if __name__=="__main__":
     for run in range (start_run, end_run+1):
 
         key = keys[run-1]
+        print(f"Run {run} in range [{start_run}, {end_run}]")
+        print(f"Using key {key}")
 
         sim_start = time.time()
         x, u, z, p, dkeys, dvalues, measurements = simulate(key=key,
                                                             initial_state=initial_state,
                                                             wall_x=wall_x,
                                                             DT=DT, TF=TF,
-                                                            class_k_gain=class_k_gain)
+                                                            class_k_gain=class_k_gain,
+                                                            filepath=None)
         sim_end = time.time() - sim_start
 
         print("Sim wall-clock time: ", sim_end)
