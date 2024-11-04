@@ -33,9 +33,6 @@ from cbfkit.controllers.model_based.cbf_clf_controllers.utils.barrier_conditions
 from cbfkit.controllers.model_based.cbf_clf_controllers.utils.certificate_packager import (
     concatenate_certificates,
 )
-from cbfkit.controllers.model_based.cbf_clf_controllers.utils.rectify_relative_degree import (
-    rectify_relative_degree,
-)
 
 # Access to CBF-CLF-QP control law
 from cbfkit.controllers.model_based.cbf_clf_controllers.vanilla_cbf_clf_qp_control_laws import (
@@ -49,7 +46,6 @@ from cbfkit.estimators import naive as estimator
 from cbfkit.modeling.additive_disturbances import generate_stochastic_perturbation
 
 # Perfect and imperfect sensors
-from cbfkit.sensors import perfect as perfect_sensor
 from cbfkit.sensors import unbiased_gaussian_noise_sd as noisy_sensor
 
 # Use forward-Euler numerical integration scheme
@@ -69,8 +65,8 @@ from models import single_integrator_2
 
 # Simulation Parameters
 SAVE_FILE = f"tutorials/{model_name}/simulation_data"
-DT = 1e-2 # use 10^-3 or 10^-4
-TF = 40.0
+DT = 1e-3 # use 10^-3 or 10^-4
+TF = 20.0
 N_STEPS = int(TF / DT) + 1
 INITIAL_STATE = jnp.array([0.0])
 ACTUATION_LIMITS = jnp.array([1.0])  # Box control input constraint, i.e., -1 <= u <= 1
@@ -78,29 +74,12 @@ ACTUATION_LIMITS = jnp.array([1.0])  # Box control input constraint, i.e., -1 <=
 # Dynamics function: dynamics(x) returns f(x), g(x), d(x)
 dynamics = single_integrator_2.plant()
 
-wall_x = 9.0
+wall_x = 3.0
+class_k_gain = 0.2
 
-### This code accomplishes the following:
-# - passes the parameters cx, cy, r, tau to the generic (unspecified) candidate CBF to create a specific one
-# - passes the instantiated cbf through the rectify_relative_degree func, which returns a (possibly new) CBF
-#       that is guaranteed to have relative-degree one with respect to the system_dynamics and is constructed
-#       using exponential CBF principles
-# - specifies the type of CBF condition to enforce (in this case a zeroing CBF condition with a linear class K func)
-# - then packages the (two, in this case) barrier functions into one object for the controller to use
-# barriers = [
-#     rectify_relative_degree(
-#         function=single_integrator_2.certificate_functions.barrier_functions.barrier_1.cbf(
-#             d = wall_x, tau=tau
-#         ),
-#         system_dynamics=dynamics,
-#         state_dim=len(INITIAL_STATE),
-#         form="exponential",
-#         roots=jnp.array([-1.0, -1.0, -1.0]),
-#     )(certificate_conditions=zeroing_barriers.linear_class_k(2.0), d = wall_x, tau=tau),
-# ]
 barriers = [
     barrier_certificate.cbf1_package(
-        certificate_conditions=zeroing_barriers.linear_class_k(0.1),
+        certificate_conditions=zeroing_barriers.linear_class_k(class_k_gain),
         d = wall_x)
 ]
 barrier_packages = concatenate_certificates(*barriers)
@@ -111,7 +90,6 @@ barrier_packages = concatenate_certificates(*barriers)
 optimized_alpha = False
 
 # Instantiate nominal controller
-kv = 1.0  # control gain defined in previous expression
 nominal_controller = single_integrator_2.controllers.controller_1()
 
 ### Instantiate CBF-CLF-QP control law
@@ -142,6 +120,7 @@ cbf_clf_controller = vanilla_cbf_clf_qp_controller(
 # p: covariances
 # dkeys: data_keys
 # dvalues: data_values
+# measurements: sensor values
 # (dkeys, dvalues) are returned by cbf_clf_qp_generator.jittable_controller in:
 #       cbfkit.controllers.model_based.cbf_clf_controllers.cbf_clf_qp_generator
 # Usually this data is returned by the controller in:
@@ -207,7 +186,6 @@ if save:
     y = np.zeros_like(x)
 
     time_steps = np.linspace(0, total_time, len(x))
-    ax.plot(x, y, label='True Trajectory')
     measurements = np.array(measurements)
 
     if len(x) == len(measurements):
@@ -218,6 +196,7 @@ if save:
         # ax.text(0.05, 0.95, text_str, transform=ax.transAxes, fontsize=10,
         # verticalalignment='top', bbox=dict(boxstyle="round,pad=0.3", edgecolor="black", facecolor="lightgrey"))
 
+    ax.plot(x, y, label='True Trajectory')
     
     fig.savefig(save_directory + model_name + " system_trajectory" + ".png")
 
