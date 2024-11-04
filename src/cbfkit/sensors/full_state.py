@@ -69,8 +69,7 @@ def unbiased_gaussian_noise_sd(
     t: float,
     x: Array,
     sigma: Optional[Union[Array, None]] = None,
-    key: Optional[Union[random.PRNGKey, None]] = None,
-    dimension=1
+    key: Optional[Union[random.PRNGKey, None]] = None
 ) -> Array:
     """Senses the state subject to additive, unbiased (zero-mean), Gaussian
     noise.
@@ -79,13 +78,16 @@ def unbiased_gaussian_noise_sd(
         t (float): time (sec)
         x (Array): state vector (ground truth)
         sigma (Array): measurement model covariance matrix
+        dimension: Which dimensions has uncertainty
 
     Returns:
         y (Array): measurement of full state vector
 
     """
 
-    variance = 0.01*jnp.square(x[0])
+    dimension=1
+
+    variance = 0.01*jnp.square(x[dimension-1])
     std_dev = jnp.sqrt(variance)
 
     if sigma is None:
@@ -93,6 +95,8 @@ def unbiased_gaussian_noise_sd(
 
     if key is None:
         key = random.PRNGKey(0)
+
+    key = random.fold_in(key, t) # create a new key for each time step, based on original key
 
     # Calculate the dimension of the random vector
     dim = sigma.shape[0]
@@ -121,7 +125,7 @@ def unbiased_gaussian_noise_sd(
 
     if not jnp.isnan(jnp.mean(sampled_random_vector)):
         # print("Sample vector is not nan")
-        new_x = x.at[0].set(x[0] + jnp.mean(sampled_random_vector))
+        new_x = x.at[dimension-1].set(x[dimension-1] + jnp.mean(sampled_random_vector))
 
     # print(new_x)
 
