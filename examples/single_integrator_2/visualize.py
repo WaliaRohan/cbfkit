@@ -15,6 +15,7 @@ print(current_dir, "------", cbfkit_path)
 sys.path.append(os.path.join(current_dir, "src"))
 
 import jax.numpy as jnp
+import jax.random as random
 
 # Import single_integrator_2 barrier function package
 import src.models.single_integrator_2.certificate_functions.barrier_functions.barrier_1 as barrier_certificate
@@ -46,6 +47,7 @@ from cbfkit.estimators import naive as estimator
 from cbfkit.modeling.additive_disturbances import generate_stochastic_perturbation
 
 # Perfect and imperfect sensors
+from cbfkit.sensors import perfect
 from cbfkit.sensors import unbiased_gaussian_noise_sd as noisy_sensor
 
 # Use forward-Euler numerical integration scheme
@@ -65,7 +67,7 @@ from models import single_integrator_2
 
 # Simulation Parameters
 SAVE_FILE = f"tutorials/{model_name}/simulation_data"
-DT = 1e-3 # use 10^-3 or 10^-4
+DT = 1e-2 # use 10^-3 or 10^-4
 TF = 20.0
 N_STEPS = int(TF / DT) + 1
 INITIAL_STATE = jnp.array([0.0])
@@ -76,6 +78,11 @@ dynamics = single_integrator_2.plant()
 
 wall_x = 3.0
 class_k_gain = 0.2
+key_seed = 0
+base_key = random.PRNGKey(key_seed)  # Starting key
+keys = random.split(base_key, 1000)  # Generate unique keys
+key = keys[0]
+print("Using key: ", key)
 
 barriers = [
     barrier_certificate.cbf1_package(
@@ -138,7 +145,28 @@ x, u, z, p, dkeys, dvalues, measurements = sim.execute(
     sensor=noisy_sensor,
     estimator=estimator,
     filepath=SAVE_FILE,
+    key=key
 )
+
+###################################################################################################
+## Analysis
+
+x = np.array(x) if not isinstance(x, np.ndarray) else x
+measurements = np.array(measurements)
+
+actual_violations = x[x > wall_x] 
+total_actual_violations = jnp.sum(x > wall_x).item() # Count how many values in x are greater than wall_x
+actual_violation_ratio = total_actual_violations / len(x) if len(x) > 0 else 0  # Avoid division by zero
+
+measured_violations = measurements[measurements > wall_x]
+total_measured_violations = jnp.sum(measurements > wall_x).item()  # Count how many values in x are greater than wall_x
+measured_violation_ratio = total_measured_violations / len(x) if len(x) > 0 else 0  # Avoid division by zero
+
+print("Total Actual Violations:", total_actual_violations)
+print("Actual Violation Ratio:", actual_violation_ratio)
+print("Total Measured Violations:", total_measured_violations)
+print("Measured Violation Ratio:", measured_violation_ratio)
+
 
 ###################################################################################################
 ## Visualization ##
@@ -186,7 +214,7 @@ if save:
     y = np.zeros_like(x)
 
     time_steps = np.linspace(0, total_time, len(x))
-    measurements = np.array(measurements)
+    measurements = np.array(measurements) if not isinstance(measurements, np.ndarray) else measurements 
 
     if len(x) == len(measurements):
         # Plot measurements
