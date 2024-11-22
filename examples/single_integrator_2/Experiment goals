@@ -1,0 +1,17 @@
+1. Figure out how to randomize each experiment
+2. Collect data for multiple runs - 100. Note how much time that takes
+3. Print number of violations, max violation value
+4. In your results, report:
+	1. Type of CBF
+	2. Type of CLF
+	3. Start/goal
+	4. safety violation time steps/total number of time steps
+	5. Max safety violations
+	6. Simulation time step
+	7. Simulation time
+
+Questions for Mitchell:
+
+1. Should we only randomize noise for the 1000 runs?
+2. Should I collect runs from different starting points?
+3. Should I collect 
