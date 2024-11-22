@@ -1,9 +1,10 @@
+from typing import Callable, Optional, Tuple, Union
+
 import jax.numpy as jnp
 from jax import Array
-from typing import Tuple, Callable, Union, Optional
 
-from cbfkit.utils.user_types import DynamicsCallable
 from cbfkit.integration import forward_euler as integrate
+from cbfkit.utils.user_types import DynamicsCallable
 
 global K_EKF
 K_EKF = jnp.zeros((6, 6))
@@ -131,7 +132,7 @@ def predict_ct_dtmeas(
         zk = integrate(z, zdot, dt)
 
         # Compute Pdot from covariance dynamics
-        Ff, Fg = dfdx(z)
+        Ff, Fg = dfdx(z) #  value of partial derivatives of f and g wrt x
         F = Ff + jnp.einsum("ijk,j->ik", Fg, u)
         # F = Ff + jnp.einsum('ijk,j->ki', Fg, u)
         Pdot = jnp.matmul(F, P) + jnp.matmul(P, F.T) + Q

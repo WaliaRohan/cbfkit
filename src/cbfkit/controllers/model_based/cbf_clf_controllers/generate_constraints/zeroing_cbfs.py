@@ -43,8 +43,16 @@ def generate_compute_zeroing_cbf_constraints(
 
         if n_bfs > 0:
             bf_x, bj_x, _, dbf_t, bc_x = compute_barrier_values(t, x)
+            # bj_x: partial derivative of barrier jacobian wrt x
+            # dbf_t: dh/dt
+            # bf_x: barrier function value
+            # bc_x: class-k function
+            # a: LHS of inequality
+            # b: RHS of inequality
 
+            # a_cbf: -LgH*g = (delH\delx)*g
             a_cbf = a_cbf.at[:, :n_con].set(-jnp.matmul(bj_x, dyn_g))
+            # b_cbf: LfH*f + alhpa(h(x)) = (delF\delx)*f + alpha(h(x))
             b_cbf = b_cbf.at[:].set(dbf_t + jnp.matmul(bj_x, dyn_f) + bc_x)
             if tunable:
                 a_cbf = a_cbf.at[:, n_con:n_bfs].set(jnp.expand_dims(-bc_x, axis=-1))

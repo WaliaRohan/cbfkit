@@ -67,7 +67,7 @@ from models import single_integrator_2
 
 # Simulation Parameters
 SAVE_FILE = f"tutorials/{model_name}/simulation_data"
-DT = 1e-2 # use 10^-3 or 10^-4
+DT = 1e-3 # use 10^-3 or 10^-4
 TF = 20.0
 N_STEPS = int(TF / DT) + 1
 INITIAL_STATE = jnp.array([0.0])
@@ -81,7 +81,7 @@ class_k_gain = 0.2
 key_seed = 0
 base_key = random.PRNGKey(key_seed)  # Starting key
 keys = random.split(base_key, 1000)  # Generate unique keys
-key = keys[0]
+key = keys[109]
 print("Using key: ", key)
 
 barriers = [

@@ -1,17 +1,17 @@
+import gc
 import os
-import sys
-
-import numpy as np
-
-import time
-
 import pickle
+import sys
+import time
 
 # Suppress specific DeprecationWarnings (for pandas)
 import warnings
+
+import numpy as np
+
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-import pandas as pd # For saving simulation data
+import pandas as pd  # For saving simulation data
 
 # Get the current directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -62,6 +62,7 @@ from cbfkit.sensors import unbiased_gaussian_noise_sd as noisy_sensor
 # Use forward-Euler numerical integration scheme
 from cbfkit.utils.numerical_integration import forward_euler as integrator
 
+
 @jit
 def sigma(x):
     # return jnp.array([[0, 0], [0, 0.05 * x[0]]])  # State-dependent diffusion term in SDE
@@ -69,45 +70,12 @@ def sigma(x):
 
 # Import newly generated Dubins UAV code
 from models import single_integrator_2
+
 model_name = "single_integrator_2"
 
 def simulate(key, initial_state, wall_x, DT, TF, class_k_gain, filepath):
 
-    # Simulation Parameters
-    # SAVE_FILE = f"tutorials/{model_name}/simulation_data"
-    N_STEPS = int(TF / DT) + 1
-    INITIAL_STATE = initial_state
-    ACTUATION_LIMITS = jnp.array([1.0])  # Box control input constraint, i.e., -1 <= u <= 1
-
-    # Dynamics function: dynamics(x) returns f(x), g(x), d(x)
-    dynamics = single_integrator_2.plant()
-
-    wall_x = wall_x
-
-    barriers = [
-        barrier_certificate.cbf1_package(
-            certificate_conditions=zeroing_barriers.linear_class_k(class_k_gain),
-            d = wall_x)
-    ]
-    barrier_packages = concatenate_certificates(*barriers)
-    ###
-
-    # Change this to True if you want the linear gain in the CBF condition's class K function
-    # to be a decision variable in the optimization problem
-    optimized_alpha = False
-
-    # Instantiate nominal controller
-    nominal_controller = single_integrator_2.controllers.controller_1()
-
-    ### Instantiate CBF-CLF-QP control law
-    cbf_clf_controller = vanilla_cbf_clf_qp_controller(
-        control_limits=ACTUATION_LIMITS,
-        nominal_input=nominal_controller,
-        dynamics_func=dynamics,
-        barriers=barrier_packages,
-        tunable_class_k=optimized_alpha,
-    )
-
+   
     ### Simulate the system
     # - beginning at initial state x0
     # - with timestep dt
@@ -133,31 +101,52 @@ def simulate(key, initial_state, wall_x, DT, TF, class_k_gain, filepath):
     # Usually this data is returned by the controller in:
     #                           cbfkit.simulation.simulator.stepper()
 
-    return sim.execute(
-        x0=INITIAL_STATE,
-        dt=DT,
-        num_steps=N_STEPS,
-        dynamics=dynamics,
-        perturbation=generate_stochastic_perturbation(sigma=sigma, dt=DT),
-        integrator=integrator,
-        controller=cbf_clf_controller,
-        sensor=noisy_sensor,
-        estimator=estimator,
-        filepath=filepath,
-        key=key
-    )
+    return 
 
 if __name__=="__main__":
     
+    program_start = time.time()
+
+    ### Simulation Parameters
     DT = 1e-3 # use 10^-3 or 10^-4
     TF = 20.0
     initial_state = jnp.array([0.0])
     wall_x = 3.0
-    class_k_gain = 0.2
+    class_k_gain = 2.0
+    N_STEPS = int(TF / DT) + 1
+    INITIAL_STATE = initial_state
+    ACTUATION_LIMITS = jnp.array([1.0])  # -1 <= u <= 1
+
+    # Dynamics function: dynamics(x) returns f(x), g(x), d(x)
+    dynamics = single_integrator_2.plant()
+
+    wall_x = wall_x
+
+    barriers = [
+        barrier_certificate.cbf1_package(
+            certificate_conditions=zeroing_barriers.linear_class_k(class_k_gain),
+            d = wall_x)
+    ]
+
+    barrier_packages = concatenate_certificates(*barriers)
+
+    # Change this to True if you want the linear gain in the CBF condition's class K function
+    # to be a decision variable in the optimization problem
+    optimized_alpha = False
+
+    nominal_controller = single_integrator_2.controllers.controller_1()
+
+    cbf_clf_controller = vanilla_cbf_clf_qp_controller(
+        control_limits=ACTUATION_LIMITS,
+        nominal_input=nominal_controller,
+        dynamics_func=dynamics,
+        barriers=barrier_packages,
+        tunable_class_k=optimized_alpha,
+    )
 
     runs = 1000
-    start_run = 1
-    end_run = 10
+    start_run = 401
+    end_run = 500
 
     base_key_seed = 0
     base_key = random.PRNGKey(base_key_seed)  # Starting key
@@ -165,11 +154,20 @@ if __name__=="__main__":
 
     results = []
 
-    actual_violation_count = []
-    measured_violation_count = []
+    num_runs = end_run - start_run + 1
+    actual_violation_count = [None] * num_runs
+    measured_violation_count = [None] * num_runs
+    actual_violation_ratios = [None] * num_runs
+    measured_violation_ratios = [None] * num_runs
 
-    actual_violation_ratios = []
-    measured_violation_ratios = []
+    # Allocate space for results (assuming N_STEPS x number of columns)
+    time_steps = np.arange(0, TF + DT, DT).reshape(-1, 1)
+    x_data = np.zeros((N_STEPS, end_run - start_run + 1))  # Pre-allocate x data
+    u_data = np.zeros((N_STEPS, end_run - start_run + 1))  # Pre-allocate u data
+    z_data = np.zeros((N_STEPS, end_run - start_run + 1))  # Pre-allocate z data
+    measurements_data = np.zeros((N_STEPS, end_run - start_run + 1))  # Pre-allocate measurements data
+    u_nom_data = np.zeros((N_STEPS, end_run - start_run + 1))  # Pre-allocate u_nom data
+    bfs_values_data = np.zeros((N_STEPS, end_run - start_run + 1))  # Pre-allocate bfs_values data
 
     max_actual_violation = -1
     max_measured_violation = -1
@@ -181,19 +179,31 @@ if __name__=="__main__":
 
     run = start_run
 
-    for run in range (start_run, end_run+1):
+    column_headers = ['Time Step', 'x', 'u', 'z', 'Measurements', 'u_nom', 'bfs_values']
+
+    for idx, run in enumerate(range(start_run, end_run + 1)):
 
         key = keys[run-1]
+        print('---------------------------------------------------------------')
         print(f"Run {run} in range [{start_run}, {end_run}]")
+        print("Elapsed time since start: ", (time.time() - program_start))
         print(f"Using key {key}")
 
         sim_start = time.time()
-        x, u, z, p, dkeys, dvalues, measurements = simulate(key=key,
-                                                            initial_state=initial_state,
-                                                            wall_x=wall_x,
-                                                            DT=DT, TF=TF,
-                                                            class_k_gain=class_k_gain,
-                                                            filepath=None)
+        x, u, z, p, dkeys, dvalues, measurements = sim.execute(
+        x0=INITIAL_STATE,
+        dt=DT,
+        num_steps=N_STEPS,
+        dynamics=dynamics,
+        perturbation=generate_stochastic_perturbation(sigma=sigma, dt=DT),
+        integrator=integrator,
+        controller=cbf_clf_controller,
+        sensor=noisy_sensor,
+        estimator=estimator,
+        filepath=None, # f"tutorials/{model_name}/simulation_data"
+        key=key
+        )
+
         sim_end = time.time() - sim_start
 
         print("Sim wall-clock time: ", sim_end)
@@ -217,15 +227,15 @@ if __name__=="__main__":
         
         actual_run_violations = x[x > wall_x] 
         total_actual_run_violations = jnp.sum(x > wall_x).item() # Count how many values in x are greater than wall_x
-        actual_violation_count.append(total_actual_run_violations)  # Append the count to the violations list
+        actual_violation_count[idx] = total_actual_run_violations  # Append the count to the violations list
         actual_run_violation_ratio = total_actual_run_violations / len(x) if len(x) > 0 else 0  # Avoid division by zero
-        actual_violation_ratios.append(actual_run_violation_ratio)  # Append the ratio to the ratios list
+        actual_violation_ratios[idx] = actual_run_violation_ratio  # Append the ratio to the ratios list
 
         measured_run_violations = measurements[measurements > wall_x]
         total_measured_run_violations = jnp.sum(measurements > wall_x).item()  # Count how many values in x are greater than wall_x
-        measured_violation_count.append(total_measured_run_violations)  # Append the count to the violations list
+        measured_violation_count[idx] = total_measured_run_violations  # Append the count to the violations list
         measured_run_violation_ratio = total_measured_run_violations / len(x) if len(x) > 0 else 0  # Avoid division by zero
-        measured_violation_ratios.append(measured_run_violation_ratio)  # Append the ratio to the ratios list
+        measured_violation_ratios[idx]  = measured_run_violation_ratio  # Append the ratio to the ratios list
 
         print("Actual run violations: ", total_actual_run_violations)
         print("Measured run violations: ", total_measured_run_violations)
@@ -239,8 +249,6 @@ if __name__=="__main__":
             print("Max measured violation: ", max(measured_run_violations))
 
         results = np.hstack((time_steps, x, u, z, measurements, u_nom, bfs_values))
-
-        column_headers = ['Time Step', 'x', 'u', 'z', 'Measurements', 'u_nom', 'bfs_values']
 
         # Create a DataFrame from results
         df = pd.DataFrame(results, columns=column_headers)
@@ -258,7 +266,9 @@ if __name__=="__main__":
 
         print("Writing wall clock time: ", write_end)
 
-        run += 1
+        # gc.collect()
+
+        print("Elapsed time since start: ", (time.time() - program_start))
 
         # print(dkeys)
 
@@ -313,5 +323,9 @@ if __name__=="__main__":
         pickle.dump(data_to_save, file)
 
     print(f"Sim results saved to {file_path}")
+
+    program_end = time.time() - program_start
+
+    print("Total time: ", program_end)
 
 

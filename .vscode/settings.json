@@ -7,5 +7,6 @@
   "cmake.configureOnOpen": false,
   "editor.codeActionsOnSave": {
     "source.organizeImports": "explicit"
-  }
+  },
+  "workbench.editor.enablePreview": false
 }
