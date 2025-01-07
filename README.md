@@ -49,7 +49,7 @@ CBFKit is readily deployable via a Docker image. After setting up Docker (refer 
 ### 2. Docker Command Line
 1. Build the image:
    ```
-   docker build -t cbfkit:latest -f .
+   docker build -t cbfkit:latest -f ./Dockerfile .
    ```
 2. Run the container:
    ```
