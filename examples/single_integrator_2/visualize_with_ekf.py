@@ -15,6 +15,10 @@ print(current_dir, "------", cbfkit_path)
 sys.path.append(os.path.join(current_dir, "src"))
 
 import jax.numpy as jnp
+import jax.random as random
+
+# Import single_integrator_multip_noise barrier function package
+import src.models.single_integrator_multip_noise.certificate_functions.barrier_functions.barrier_1 as barrier_certificate
 from jax import jit, jacfwd
 
 ### Import existing CBFkit code for simulation
@@ -26,15 +30,9 @@ from cbfkit.controllers.model_based.cbf_clf_controllers.utils.barrier_conditions
     zeroing_barriers,
 )
 
-# Import dubins_uav_wall barrier function package
-import src.models.dubins_uav_wall.certificate_functions.barrier_functions.barrier_1 as barrier_certificate
-
 # Necessary housekeeping for using multiple CBFs/CLFs
 from cbfkit.controllers.model_based.cbf_clf_controllers.utils.certificate_packager import (
     concatenate_certificates,
-)
-from cbfkit.controllers.model_based.cbf_clf_controllers.utils.rectify_relative_degree import (
-    rectify_relative_degree,
 )
 
 # Access to CBF-CLF-QP control law
@@ -42,15 +40,16 @@ from cbfkit.controllers.model_based.cbf_clf_controllers.vanilla_cbf_clf_qp_contr
     vanilla_cbf_clf_qp_controller,
 )
 
-# from cbfkit.estimators import ekf as estimator
-from cbfkit.estimators import ct_gekf_dtmeas
+# Perfect state estimation
+# from cbfkit.estimators import naive as estimator
+from cbfkit.estimators import ct_ekf_dtmeas
 
 # To add stochastic perturbation to system dynamics
 from cbfkit.modeling.additive_disturbances import generate_stochastic_perturbation
 
 # Perfect and imperfect sensors
-from cbfkit.sensors import perfect as perfect_sensor
-from cbfkit.sensors import unbiased_gaussian_noise as noisy_sensor # can just use a non-state dependent sensor here
+from cbfkit.sensors import perfect
+from cbfkit.sensors import unbiased_gaussian_noise_sd as noisy_sensor
 
 # Use forward-Euler numerical integration scheme
 from cbfkit.utils.numerical_integration import forward_euler as integrator
@@ -59,57 +58,32 @@ from cbfkit.utils.numerical_integration import forward_euler as integrator
 @jit
 def sigma(x):
     # return jnp.array([[0, 0], [0, 0.05 * x[0]]])  # State-dependent diffusion term in SDE
-    return jnp.zeros((4, 4))
+    return jnp.zeros((1, 1))
 
-model_name = "dubins_uav_wall"
 
-# Import newly generated Dubins UAV code
-from models import dubins_uav_wall
+model_name = "single_integrator_multip_noise"
+
+# Import newly generated code
+from models import single_integrator_multip_noise
 
 # Simulation Parameters
 SAVE_FILE = f"tutorials/{model_name}/simulation_data"
-DT = 1e-2
-TF = 40.0
+DT = 1e-3 # use 10^-3 or 10^-4
+TF = 20.0
 N_STEPS = int(TF / DT) + 1
-INITIAL_STATE = jnp.array([0.0, 20.0, np.radians(245), 1.0])
+INITIAL_STATE = jnp.array([0.0])
 ACTUATION_LIMITS = jnp.array([1.0])  # Box control input constraint, i.e., -1 <= u <= 1
 
 # Dynamics function: dynamics(x) returns f(x), g(x), d(x)
-dynamics = dubins_uav_wall.plant()
+dynamics = single_integrator_multip_noise.plant()
 
-wall_x = 1.0
-
-### This code accomplishes the following:
-# - passes the parameters cx, cy, r, tau to the generic (unspecified) candidate CBF to create a specific one
-# - passes the instantiated cbf through the rectify_relative_degree func, which returns a (possibly new) CBF
-#       that is guaranteed to have relative-degree one with respect to the system_dynamics and is constructed
-#       using exponential CBF principles
-# - specifies the type of CBF condition to enforce (in this case a zeroing CBF condition with a linear class K func)
-# - then packages the (two, in this case) barrier functions into one object for the controller to use
-# barriers = [
-#     rectify_relative_degree(
-#         function=dubins_uav_wall.certificate_functions.barrier_functions.barrier_1.cbf(
-#             d = wall_x, tau=tau
-#         ),
-#         system_dynamics=dynamics,
-#         state_dim=len(INITIAL_STATE),
-#         form="exponential",
-#         roots=jnp.array([-1.0, -1.0, -1.0]),
-#     )(certificate_conditions=zeroing_barriers.linear_class_k(2.0), d = wall_x, tau=tau),
-# ]
-
-# CertificateCollection = Tuple[
-#     List[CertificateCallable],
-#     List[CertificateJacobianCallable],
-#     List[CertificateHessianCallable],
-#     List[CertificatePartialCallable],
-#     List[CertificateConditionsCallable],
-# ]
-
-class_k_gain = 2.0
-# Change this to True if you want the linear gain in the CBF condition's class K function
-# to be a decision variable in the optimization problem
-optimized_alpha = False
+wall_x = 3.0
+class_k_gain = 0.2
+key_seed = 0
+base_key = random.PRNGKey(key_seed)  # Starting key
+keys = random.split(base_key, 1000)  # Generate unique keys
+key = keys[109]
+print("Using key: ", key)
 
 barriers = [
     barrier_certificate.cbf1_package(
@@ -119,9 +93,12 @@ barriers = [
 barrier_packages = concatenate_certificates(*barriers)
 ###
 
+# Change this to True if you want the linear gain in the CBF condition's class K function
+# to be a decision variable in the optimization problem
+optimized_alpha = False
+
 # Instantiate nominal controller
-kv = 0.01  # control gain defined in previous expression
-nominal_controller = dubins_uav_wall.controllers.controller_1(kv=kv)
+nominal_controller = single_integrator_multip_noise.controllers.controller_1()
 
 ### Instantiate CBF-CLF-QP control law
 cbf_clf_controller = vanilla_cbf_clf_qp_controller(
@@ -130,17 +107,17 @@ cbf_clf_controller = vanilla_cbf_clf_qp_controller(
     dynamics_func=dynamics,
     barriers=barrier_packages,
     tunable_class_k=optimized_alpha,
-    relaxable_clf=True,
 )
 
 Q = 0.05 * jnp.eye(len(INITIAL_STATE))  # process noise
 R = 0.05 * jnp.eye(len(INITIAL_STATE))  # measurement noise
 plant_jacobians = jacfwd(dynamics)
+# plant_jacobians = lambda : 1
 dfdx = plant_jacobians
 h = lambda x: x
-dhdx = lambda _x: np.eye((len(INITIAL_STATE)))
+dhdx = lambda _x: np.eye((len(setup.initial_state)))
 
-estimator = ct_gekf_dtmeas(
+estimator = ct_ekf_dtmeas(
     Q=Q,
     R=R,
     dynamics=dynamics,
@@ -169,6 +146,7 @@ estimator = ct_gekf_dtmeas(
 # p: covariances
 # dkeys: data_keys
 # dvalues: data_values
+# measurements: sensor values
 # (dkeys, dvalues) are returned by cbf_clf_qp_generator.jittable_controller in:
 #       cbfkit.controllers.model_based.cbf_clf_controllers.cbf_clf_qp_generator
 # Usually this data is returned by the controller in:
@@ -186,10 +164,27 @@ x, u, z, p, dkeys, dvalues, measurements = sim.execute(
     sensor=noisy_sensor,
     estimator=estimator,
     filepath=SAVE_FILE,
+    key=key
 )
 
-print("State: ", x[0])
-print("Measurement: ", measurements[0])
+###################################################################################################
+## Analysis
+
+x = np.array(x) if not isinstance(x, np.ndarray) else x
+measurements = np.array(measurements)
+
+actual_violations = x[x > wall_x] 
+total_actual_violations = jnp.sum(x > wall_x).item() # Count how many values in x are greater than wall_x
+actual_violation_ratio = total_actual_violations / len(x) if len(x) > 0 else 0  # Avoid division by zero
+
+measured_violations = measurements[measurements > wall_x]
+total_measured_violations = jnp.sum(measurements > wall_x).item()  # Count how many values in x are greater than wall_x
+measured_violation_ratio = total_measured_violations / len(x) if len(x) > 0 else 0  # Avoid division by zero
+
+print("Total Actual Violations:", total_actual_violations)
+print("Actual Violation Ratio:", actual_violation_ratio)
+print("Total Measured Violations:", total_measured_violations)
+print("Measured Violation Ratio:", measured_violation_ratio)
 
 ###################################################################################################
 ## Visualization ##
@@ -198,7 +193,6 @@ import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 
 ## Visualization ##
-
 
 total_time = DT * len(x)
 
@@ -209,8 +203,17 @@ ax.set_xlabel("X (m)")
 ax.set_ylabel("Y (m)")
 ax.set_title(f"System Trajectory (T = {total_time:.2f} s)")
 
+# Define start and goal coordinates
+x_d = 10.0
+start = (INITIAL_STATE[0], 0)
+goal = (x_d, 0)
+
+# Plotting
+ax.plot(start[0], start[1], 'go', label='Start')  # Start as a green circle
+ax.plot(goal[0], goal[1], 'ro', label='Goal')  # Goal as a red circle
+
 # Plot a vertical line at x = wall_x
-ax.axhline(y=wall_x, color='black', linestyle='--')
+ax.axvline(x=wall_x, color='black', linestyle='--')
 
 save = True
 animate = False
@@ -220,25 +223,31 @@ save_directory = "plots/" + model_name + "/"
 if not os.path.exists(save_directory):
     os.makedirs(save_directory)
 
-print()
+text_str = f"Final true X: {x[-1]}\nFinal measured x: {measurements[-1]}"
+
 
 if save:
 
-    ax.plot(x[:, 0], x[:, 1], label='True Trajectory')
-    measurements = np.array(measurements)
+    y = np.zeros_like(x)
+
+    time_steps = np.linspace(0, total_time, len(x))
+    measurements = np.array(measurements) if not isinstance(measurements, np.ndarray) else measurements 
 
     if len(x) == len(measurements):
         # Plot measurements
-        ax.plot(measurements[:, 0], measurements[:, 1], label='Measured Trajectory', linewidth=0.5)
+        ax.plot(measurements, y, label='Measured Trajectory', linewidth=0.5)
         # Optionally add a legend to differentiate the data
         ax.legend()
+        # ax.text(0.05, 0.95, text_str, transform=ax.transAxes, fontsize=10,
+        # verticalalignment='top', bbox=dict(boxstyle="round,pad=0.3", edgecolor="black", facecolor="lightgrey"))
 
+    ax.plot(x, y, label='True Trajectory')
     
     fig.savefig(save_directory + model_name + " system_trajectory" + ".png")
 
     # Plot CBF values
     fig2, ax2 = plt.subplots()
-    time_steps = np.linspace(0, total_time, len(x))
+    
     # Extract values of 'bfs' key from the dictionaries at index 3 in each sublist
     bfs_values = [
         data_dict["bfs"] for sublist in dvalues if "bfs" in sublist[3] for data_dict in [sublist[3]]
@@ -284,18 +293,18 @@ if save:
     # Save the plots
     fig4.savefig(save_directory + model_name + " control_values_diff" + ".png")
 
-    fig5, ax5 = plt.subplots()
+    fig5, ax5 = plt.subplots(layout="constrained")
     ax5.plot(time_steps, x[:, 0], label='True X')
     ax5.plot(time_steps, measurements[:, 0], label='Measured X', linewidth=0.5)
     ax5.legend()
+    ax5.set_xlabel("Time (s)")
+    ax5.set_ylabel("X (m)")
+    ax5.set_title("True vs Measured X")
+    # plt.gcf().text(0.95, 1.02, text_str, fontsize=10, verticalalignment='top', 
+    #            horizontalalignment='right', bbox=dict(boxstyle="round,pad=0.3", edgecolor="black", facecolor="lightgrey"))
     fig5.savefig(save_directory + model_name + " true_vs_measured_x" + ".png")
-
-    fig6, ax6 = plt.subplots()
-    ax6.plot(time_steps, x[:, 1], label='True Y')
-    ax6.plot(time_steps, measurements[:, 1], label='Measured Y', linewidth=0.5)
-    ax6.legend()
-    fig6.savefig(save_directory + model_name + " true_vs_measured_Y" + ".png")
     
+    print(x[-1], measurements[-1])
 
 if animate:
     (line,) = ax.plot([], [], lw=5)
