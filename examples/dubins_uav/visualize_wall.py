@@ -78,7 +78,7 @@ ACTUATION_LIMITS = jnp.array([1.0])  # Box control input constraint, i.e., -1 <=
 # Dynamics function: dynamics(x) returns f(x), g(x), d(x)
 dynamics = dubins_uav_wall.plant()
 
-wall_x = 1.0
+wall_x = 10.0
 
 ### This code accomplishes the following:
 # - passes the parameters cx, cy, r, tau to the generic (unspecified) candidate CBF to create a specific one
@@ -205,6 +205,7 @@ print()
 
 if save:
 
+    ax.axvline(x=wall_x, color='purple', linestyle=':', linewidth=2, label=f"obstacle")
     ax.plot(x[:, 0], x[:, 1], label='True Trajectory')
     measurements = np.array(measurements)
 
@@ -213,8 +214,25 @@ if save:
         ax.plot(measurements[:, 0], measurements[:, 1], label='Measured Trajectory', linewidth=0.5)
         # Optionally add a legend to differentiate the data
         ax.legend()
-
     
+    # Mark the first position with a green circle
+    ax.plot(x[0, 0], x[0, 1], 'go', markersize=8, label='Start Position')
+
+    # Mark the last position with a red circle
+    ax.plot(x[-1, 0], x[-1, 1], 'ro', markersize=8, label='End Position')
+
+    # Plot direction arrows
+    arrow_scale = 0.5  # Scaling factor for arrow length
+    arrow_spacing = max(1, len(x) // 20)  # Plot fewer arrows for clarity
+
+    for i in range(0, len(x), arrow_spacing):  # Adjusting arrow density
+        dx = np.cos(x[i, 2]) * x[i, 3] * arrow_scale  # Scaled velocity projection along x-axis
+        dy = np.sin(x[i, 2]) * x[i, 3] * arrow_scale  # Scaled velocity projection along y-axis
+        ax.arrow(
+            x[i, 0], x[i, 1], dx, dy, 
+            head_width=0.5, head_length=0.15, fc='green', ec='green', alpha=0.8
+        )
+
     fig.savefig(save_directory + model_name + " system_trajectory" + ".png")
 
     # Plot CBF values
