@@ -49,7 +49,7 @@ yd_dot = f"{yd}-{y}"
 
 # Define Lyapunov fcn
 ey = f"{yd_dot} - {f[1]}"
-lyap = f"1/2 * ({ey})**2"
+lyap = f"1/2 * ({ey})**2" # can make 1/2 smaller
 
 # CLF-inspired control: Vdot = -k*V
 nominal_control_law = (
@@ -58,8 +58,8 @@ nominal_control_law = (
 params["controller"] = {"kv: float": 1.0}
 
 # Define h, hdot
-h = f"x[1] - d"
-hdot = f"{f[1]}"
+h = f"d - x[0]"
+# hdot = f"-{f[0]}" not used
 
 # Specify candidate CBF and params
 candidate_cbfs = [f"{h}"]
