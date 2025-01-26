@@ -21,13 +21,13 @@ from jax import jit
 # Provides access to execute (sim.execute)
 import cbfkit.simulation.simulator as sim
 
+# Import dubins_uav_wall barrier function package
+import src.models.dubins_uav_wall.certificate_functions.barrier_functions.barrier_1 as barrier_certificate
+
 # Suite of zeroing barrier function derivative conditions (forms of Class K functions)
 from cbfkit.controllers.model_based.cbf_clf_controllers.utils.barrier_conditions import (
     zeroing_barriers,
 )
-
-# Import dubins_uav_wall barrier function package
-import src.models.dubins_uav_wall.certificate_functions.barrier_functions.barrier_1 as barrier_certificate
 
 # Necessary housekeeping for using multiple CBFs/CLFs
 from cbfkit.controllers.model_based.cbf_clf_controllers.utils.certificate_packager import (
@@ -49,8 +49,7 @@ from cbfkit.estimators import naive as estimator
 from cbfkit.modeling.additive_disturbances import generate_stochastic_perturbation
 
 # Perfect and imperfect sensors
-from cbfkit.sensors import perfect as perfect_sensor
-from cbfkit.sensors import unbiased_gaussian_noise_sd as noisy_sensor
+from cbfkit.sensors import unbiased_gaussian_noise as noisy_sensor
 
 # Use forward-Euler numerical integration scheme
 from cbfkit.utils.numerical_integration import forward_euler as integrator
@@ -106,20 +105,22 @@ wall_x = 10.0
 #     List[CertificatePartialCallable],
 #     List[CertificateConditionsCallable],
 # ]
+
+class_k_gain = 2.0
+# Change this to True if you want the linear gain in the CBF condition's class K function
+# to be a decision variable in the optimization problem
+optimized_alpha = False
+
 barriers = [
     barrier_certificate.cbf1_package(
-        certificate_conditions=zeroing_barriers.linear_class_k(2.0),
+        certificate_conditions=zeroing_barriers.linear_class_k(class_k_gain),
         d = wall_x)
 ]
 barrier_packages = concatenate_certificates(*barriers)
 ###
 
-# Change this to True if you want the linear gain in the CBF condition's class K function
-# to be a decision variable in the optimization problem
-optimized_alpha = False
-
 # Instantiate nominal controller
-kv = 1.0  # control gain defined in previous expression
+kv = 0.01  # control gain defined in previous expression
 nominal_controller = dubins_uav_wall.controllers.controller_1(kv=kv)
 
 ### Instantiate CBF-CLF-QP control law
