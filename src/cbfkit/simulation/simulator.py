@@ -199,7 +199,9 @@ def simulator(
         # Simulate remaining timesteps
         for s in items:
             x, u, z, p, data, y = step(dt * s, x, u, z, p)
-            log(data)
+            # log(data)
+            dict1 = {"x":x, "u":u, "z": z, "y": y, "p": p}
+            log(dict1 | data)
 
             yield x, u, z, p, list(data.keys()), list(data.values()), y
 
