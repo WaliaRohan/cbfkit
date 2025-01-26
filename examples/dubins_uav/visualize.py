@@ -146,7 +146,7 @@ cbf_clf_controller = vanilla_cbf_clf_qp_controller(
 # Usually this data is returned by the controller in:
 #                           cbfkit.simulation.simulator.stepper()
 
-x, u, z, p, dkeys, dvalues = sim.execute(
+x, u, z, p, dkeys, dvalues, measurements = sim.execute(
     x0=INITIAL_STATE,
     dt=DT,
     num_steps=N_STEPS,
@@ -165,7 +165,9 @@ x, u, z, p, dkeys, dvalues = sim.execute(
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 
-## Visualization ##
+save_directory = "plots/" + model_name + "/"
+if not os.path.exists(save_directory):
+    os.makedirs(save_directory)
 
 total_time = DT * len(x)
 
@@ -190,7 +192,7 @@ if save:
             )
         )
 
-    fig.savefig(model_name + " system_trajectory" + ".png")
+    fig.savefig(save_directory + model_name + " system_trajectory" + ".png")
 
     # Plot CBF values
     fig2, ax2 = plt.subplots()
@@ -203,7 +205,7 @@ if save:
     ax2.set_xlabel("Time (s)")
     ax2.set_ylabel("CBF Values")
     ax2.set_title("CBF Values")
-    fig2.savefig(model_name + " barrier_function_values" + ".png")
+    fig2.savefig(save_directory + model_name + " barrier_function_values" + ".png")
 
     # Plot nominal and actual control effort
     fig3, ax3 = plt.subplots()
@@ -215,7 +217,7 @@ if save:
     ax3.set_ylabel("Control Input Values")
     ax3.set_title("Control Input")
     ax3.legend()
-    fig3.savefig(model_name + " control_values" + ".png")
+    fig3.savefig(save_directory + model_name + " control_values" + ".png")
 
     # Plot difference in control efforts
     difference = [ui_nom - ui for ui_nom, ui in zip(u_nom, u)]
@@ -236,7 +238,7 @@ if save:
     ax4.legend()
 
     # Save the plots
-    fig4.savefig(model_name + " control_values_diff" + ".png")
+    fig4.savefig(save_directory + model_name + " control_values_diff" + ".png")
 
 if animate:
     (line,) = ax.plot([], [], lw=5)
