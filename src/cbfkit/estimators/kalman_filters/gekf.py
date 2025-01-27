@@ -174,19 +174,18 @@ def update_dtmeas(
         """
 
         # Multiplicative noise
-        mu_u = 0.1
-        sigma_u = 0.1
+        mu_u = 0.01
+        sigma_u = 0.01
 
         # Additive noise
-        mu_v = 0.1
-        sigma_v = 0.1
+        mu_v = 0.01
+        sigma_v = 0.01
 
-        H = dhdx(z)
-        H_dot = H
+        H_dot = dhdx(z)
 
         E = (1 + mu_u)*h(z) + mu_v
         C = (1 + mu_u)*jnp.matmul(P, jnp.transpose(H_dot, axes=None))
-        M = jnp.matmul(H_dot, jnp.matmul(P, jnp.transpose(H_dot))) + jnp.matmul(h(z), H_dot)
+        M = jnp.diag(jnp.diag(jnp.matmul(H_dot, jnp.matmul(P, jnp.transpose(H_dot))) + jnp.matmul(h(z), H_dot)))
         S = jnp.square(1 + mu_u)*jnp.matmul(H_dot, jnp.matmul(P, jnp.transpose(H_dot, axes=None))) + jnp.square(sigma_u)*M + jnp.square(sigma_v)
 
         # K = jnp.matmul(jnp.matmul(P, H.T), jnp.linalg.inv(jnp.matmul(jnp.matmul(H, P), H.T) + R))
