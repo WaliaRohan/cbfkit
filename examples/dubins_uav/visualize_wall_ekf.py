@@ -72,13 +72,13 @@ SAVE_FILE = f"tutorials/{model_name}/simulation_data"
 DT = 1e-2
 TF = 40.0
 N_STEPS = int(TF / DT) + 1
-INITIAL_STATE = jnp.array([0.0, 20.0, np.radians(245), 1.0])
+INITIAL_STATE = jnp.array([0.0, 5.0, np.radians(245), 1.0])
 ACTUATION_LIMITS = jnp.array([1.0])  # Box control input constraint, i.e., -1 <= u <= 1
 
 # Dynamics function: dynamics(x) returns f(x), g(x), d(x)
 dynamics = dubins_uav_wall.plant()
 
-wall_x = 1.0
+wall_x = 10.0
 
 ### This code accomplishes the following:
 # - passes the parameters cx, cy, r, tau to the generic (unspecified) candidate CBF to create a specific one
@@ -198,9 +198,6 @@ print("Measurement: ", measurements[0])
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 
-## Visualization ##
-
-
 total_time = DT * len(x)
 
 print("Total time: ", total_time)
@@ -209,10 +206,6 @@ fig, ax = plt.subplots()
 ax.set_xlabel("X (m)")
 ax.set_ylabel("Y (m)")
 ax.set_title(f"System Trajectory (T = {total_time:.2f} s)")
-
-# Plot a vertical line at x = wall_x
-ax.axhline(y=wall_x, color='black', linestyle='--')
-
 save = True
 animate = False
 
