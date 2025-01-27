@@ -43,8 +43,7 @@ from cbfkit.controllers.model_based.cbf_clf_controllers.vanilla_cbf_clf_qp_contr
 )
 
 # from cbfkit.estimators import naive as estimator
-from cbfkit.estimators import ct_ekf_dtmeas
-# from cbfkit.estimators import ct_gekf_dtmeas
+from cbfkit.estimators import ct_gekf_dtmeas
 
 
 # To add stochastic perturbation to system dynamics
@@ -73,13 +72,13 @@ SAVE_FILE = f"tutorials/{model_name}/simulation_data"
 DT = 1e-2
 TF = 40.0
 N_STEPS = int(TF / DT) + 1
-INITIAL_STATE = jnp.array([0.0, 20.0, np.radians(245), 1.0])
+INITIAL_STATE = jnp.array([0.0, 5.0, np.radians(245), 1.0])
 ACTUATION_LIMITS = jnp.array([1.0])  # Box control input constraint, i.e., -1 <= u <= 1
 
 # Dynamics function: dynamics(x) returns f(x), g(x), d(x)
 dynamics = dubins_uav_wall.plant()
 
-wall_x = 1.0
+wall_x = 10.0
 
 ### This code accomplishes the following:
 # - passes the parameters cx, cy, r, tau to the generic (unspecified) candidate CBF to create a specific one
@@ -111,7 +110,7 @@ wall_x = 1.0
 class_k_gain = 2.0
 # Change this to True if you want the linear gain in the CBF condition's class K function
 # to be a decision variable in the optimization problem
-optimized_alpha = True
+optimized_alpha = False
 
 barriers = [
     barrier_certificate.cbf1_package(
@@ -142,7 +141,7 @@ dfdx = plant_jacobians
 h = lambda x: x
 dhdx = lambda _x: np.eye((len(INITIAL_STATE)))
 
-estimator = ct_ekf_dtmeas(
+estimator = ct_gekf_dtmeas(
     Q=Q,
     R=R,
     dynamics=dynamics,
@@ -177,7 +176,7 @@ estimator = ct_ekf_dtmeas(
 #                           cbfkit.simulation.simulator.stepper()
 
 
-x, u, z, p, dkeys, dvalues, measurements = sim.execute(
+x, u, observations, p, dkeys, dvalues, measurements = sim.execute(
     x0=INITIAL_STATE,
     dt=DT,
     num_steps=N_STEPS,
@@ -199,9 +198,6 @@ print("Measurement: ", measurements[0])
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 
-## Visualization ##
-
-
 total_time = DT * len(x)
 
 print("Total time: ", total_time)
@@ -211,13 +207,10 @@ ax.set_xlabel("X (m)")
 ax.set_ylabel("Y (m)")
 ax.set_title(f"System Trajectory (T = {total_time:.2f} s)")
 
-# Plot a vertical line at x = wall_x
-ax.axhline(y=wall_x, color='black', linestyle='--')
-
 save = True
 animate = False
 
-save_directory = "plots/" + model_name + "_ekf/"
+save_directory = "plots/" + model_name + "_gekf/"
 
 if not os.path.exists(save_directory):
     os.makedirs(save_directory)
@@ -236,17 +229,20 @@ if save:
         # Optionally add a legend to differentiate the data
         ax.legend()
 
-    # Plot direction arrows
-    arrow_scale = 0.5  # Scaling factor for arrow length
-    arrow_spacing = max(1, len(x) // 20)  # Plot fewer arrows for clarity
+    plot_heading = False
 
-    for i in range(0, len(x), arrow_spacing):  # Adjusting arrow density
-        dx = np.cos(x[i, 2]) * x[i, 3] * arrow_scale  # Scaled velocity projection along x-axis
-        dy = np.sin(x[i, 2]) * x[i, 3] * arrow_scale  # Scaled velocity projection along y-axis
-        ax.arrow(
-            x[i, 0], x[i, 1], dx, dy, 
-            head_width=0.5, head_length=0.15, fc='green', ec='green', alpha=0.8
-        )
+    if(plot_heading):
+        # Plot direction arrows
+        arrow_scale = 0.5  # Scaling factor for arrow length
+        arrow_spacing = max(1, len(x) // 20)  # Plot fewer arrows for clarity
+
+        for i in range(0, len(x), arrow_spacing):  # Adjusting arrow density
+            dx = np.cos(x[i, 2]) * x[i, 3] * arrow_scale  # Scaled velocity projection along x-axis
+            dy = np.sin(x[i, 2]) * x[i, 3] * arrow_scale  # Scaled velocity projection along y-axis
+            ax.arrow(
+                x[i, 0], x[i, 1], dx, dy, 
+                head_width=0.5, head_length=0.15, fc='green', ec='green', alpha=0.8
+            )
 
     fig.savefig(save_directory + model_name + " system_trajectory" + ".png")
 
@@ -301,15 +297,17 @@ if save:
     fig5, ax5 = plt.subplots()
     ax5.plot(time_steps, x[:, 0], label='True X')
     ax5.plot(time_steps, measurements[:, 0], label='Measured X', linewidth=0.5)
+    ax5.plot(time_steps, observations[:, 0], label='Observed X', linestyle='--', linewidth=0.7)
     ax5.legend()
     fig5.savefig(save_directory + model_name + " true_vs_measured_x" + ".png")
 
     fig6, ax6 = plt.subplots()
     ax6.plot(time_steps, x[:, 1], label='True Y')
     ax6.plot(time_steps, measurements[:, 1], label='Measured Y', linewidth=0.5)
+    ax6.plot(time_steps, observations[:, 1], label='Observed Y', linestyle='--', linewidth=0.7)
     ax6.legend()
     fig6.savefig(save_directory + model_name + " true_vs_measured_Y" + ".png")
-    
+        
 
 if animate:
     (line,) = ax.plot([], [], lw=5)
