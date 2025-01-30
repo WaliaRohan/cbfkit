@@ -190,11 +190,13 @@ def update_dtmeas(
         C = jnp.matmul(P, jnp.transpose(H_dot, axes=None))  # Perform the matrix multiplication
         C = C.at[1].set((1 + mu_u) * C[1])  # Modify only the second element
         
-        M = jnp.diag(jnp.diag(jnp.matmul(H_dot, jnp.matmul(P, jnp.transpose(H_dot))) + jnp.matmul(h_z, jnp.transpose(H_dot))))
+        M = jnp.diag(jnp.diag(jnp.matmul(H_dot, jnp.matmul(P, jnp.transpose(H_dot))) + jnp.matmul(h_z, jnp.transpose(h_z))))
         
         S = jnp.matmul(H_dot, jnp.matmul(P, jnp.transpose(H_dot, axes=None)))  # Perform matrix multiplication
         S = S.at[1].set(jnp.square(1 + mu_u) * S[1])  # Apply (1 + mu_u)^2 to the second element only
-        S = S + jnp.square(sigma_u) * M + jnp.square(sigma_v)  # Add the remaining terms
+        # S = S + jnp.square(sigma_u) * M + jnp.square(sigma_v)  # Should simga_u^2 only be applied to terms of M that are affected by y? (i.e second term?)
+        M = M.at[1, 1].set(jnp.square(sigma_u) * M[1, 1])
+        S = S + M + jnp.square(sigma_v)
 
         # K = jnp.matmul(jnp.matmul(P, H.T), jnp.linalg.inv(jnp.matmul(jnp.matmul(H, P), H.T) + R))
         # z_new = z + jnp.matmul(K, y - h(z))
