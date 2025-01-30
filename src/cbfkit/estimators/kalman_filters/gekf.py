@@ -175,7 +175,7 @@ def update_dtmeas(
 
         # Multiplicative noise
         mu_u = 0.0174
-        sigma_u = 2.916e-4
+        sigma_u = 10*2.916e-4 # 10 times more than what was shown in GEKF paper
 
         # Additive noise
         mu_v = -0.0386
@@ -194,14 +194,8 @@ def update_dtmeas(
         
         S = jnp.matmul(H_dot, jnp.matmul(P, jnp.transpose(H_dot, axes=None)))  # Perform matrix multiplication
         S = S.at[1].set(jnp.square(1 + mu_u) * S[1])  # Apply (1 + mu_u)^2 to the second element only
-        # S = S + jnp.square(sigma_u) * M + jnp.square(sigma_v)  # Should simga_u^2 only be applied to terms of M that are affected by y? (i.e second term?)
         M = M.at[1, 1].set(jnp.square(sigma_u) * M[1, 1])
         S = S + M + jnp.square(sigma_v)
-
-        # K = jnp.matmul(jnp.matmul(P, H.T), jnp.linalg.inv(jnp.matmul(jnp.matmul(H, P), H.T) + R))
-        # z_new = z + jnp.matmul(K, y - h(z))
-        # P_new = jnp.matmul(jnp.eye(P.shape[0]) - jnp.matmul(K, H), P)
-        # set_global_k_ekf(K)
 
         K = jnp.matmul(C, jnp.linalg.inv(S))
         z_new = z + jnp.matmul(K, y - E)
