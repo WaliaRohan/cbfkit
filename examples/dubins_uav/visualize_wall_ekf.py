@@ -70,7 +70,7 @@ from models import dubins_uav_wall
 # Simulation Parameters
 SAVE_FILE = f"tutorials/{model_name}/simulation_data"
 DT = 1e-2
-TF = 1.4
+TF = 40.0
 N_STEPS = int(TF / DT) + 1
 INITIAL_STATE = jnp.array([0.0, 5.0, np.radians(245), 1.0])
 ACTUATION_LIMITS = jnp.array([1.0])  # Box control input constraint, i.e., -1 <= u <= 1
@@ -294,6 +294,8 @@ if save:
     ax5.plot(time_steps, x[:, 0], label='True X')
     ax5.plot(time_steps, measurements[:, 0], label='Measured X', linewidth=0.5)
     ax5.plot(time_steps, observations[:, 0], label='Observed X', linestyle='--', linewidth=0.7)
+    ax5.set_xlabel("Time (s)")
+    ax5.set_ylabel("X")
     ax5.legend()
     fig5.savefig(save_directory + model_name + " true_vs_measured_x" + ".png")
 
@@ -301,6 +303,8 @@ if save:
     ax6.plot(time_steps, x[:, 1], label='True Y')
     ax6.plot(time_steps, measurements[:, 1], label='Measured Y', linewidth=0.5)
     ax6.plot(time_steps, observations[:, 1], label='Observed Y', linestyle='--', linewidth=0.7)
+    ax6.set_xlabel("Time (s)")
+    ax6.set_ylabel("Y")
     ax6.legend()
     fig6.savefig(save_directory + model_name + " true_vs_measured_Y" + ".png")
     
