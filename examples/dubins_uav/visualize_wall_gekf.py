@@ -69,7 +69,7 @@ from models import dubins_uav_wall
 
 # Simulation Parameters
 SAVE_FILE = f"tutorials/{model_name}/simulation_data"
-DT = 1e-2
+DT = 1e-4
 TF = 5.0
 N_STEPS = int(TF / DT) + 1
 INITIAL_STATE = jnp.array([0.0, 0.0, np.radians(245), 1.0])
