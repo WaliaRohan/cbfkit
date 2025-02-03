@@ -50,8 +50,7 @@ from cbfkit.estimators import ct_ekf_dtmeas
 from cbfkit.modeling.additive_disturbances import generate_stochastic_perturbation
 
 # Perfect and imperfect sensors
-from cbfkit.sensors import perfect as perfect_sensor
-from cbfkit.sensors import unbiased_gaussian_noise as noisy_sensor # can just use a non-state dependent sensor here
+from cbfkit.sensors import unbiased_gaussian_noise_mult as noisy_sensor # can just use a non-state dependent sensor here
 
 # Use forward-Euler numerical integration scheme
 from cbfkit.utils.numerical_integration import forward_euler as integrator
@@ -70,7 +69,7 @@ from models import dubins_uav_wall
 # Simulation Parameters
 SAVE_FILE = f"tutorials/{model_name}/simulation_data"
 DT = 1e-2
-TF = 40.0
+TF = 5.0
 N_STEPS = int(TF / DT) + 1
 INITIAL_STATE = jnp.array([0.0, 5.0, np.radians(245), 1.0])
 ACTUATION_LIMITS = jnp.array([1.0])  # Box control input constraint, i.e., -1 <= u <= 1
