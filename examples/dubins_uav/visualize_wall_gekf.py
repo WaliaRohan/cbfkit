@@ -79,37 +79,7 @@ ACTUATION_LIMITS = jnp.array([1.0])  # Box control input constraint, i.e., -1 <=
 dynamics = dubins_uav_wall.plant()
 
 wall_x = 10.0
-
-### This code accomplishes the following:
-# - passes the parameters cx, cy, r, tau to the generic (unspecified) candidate CBF to create a specific one
-# - passes the instantiated cbf through the rectify_relative_degree func, which returns a (possibly new) CBF
-#       that is guaranteed to have relative-degree one with respect to the system_dynamics and is constructed
-#       using exponential CBF principles
-# - specifies the type of CBF condition to enforce (in this case a zeroing CBF condition with a linear class K func)
-# - then packages the (two, in this case) barrier functions into one object for the controller to use
-# barriers = [
-#     rectify_relative_degree(
-#         function=dubins_uav_wall.certificate_functions.barrier_functions.barrier_1.cbf(
-#             d = wall_x, tau=tau
-#         ),
-#         system_dynamics=dynamics,
-#         state_dim=len(INITIAL_STATE),
-#         form="exponential",
-#         roots=jnp.array([-1.0, -1.0, -1.0]),
-#     )(certificate_conditions=zeroing_barriers.linear_class_k(2.0), d = wall_x, tau=tau),
-# ]
-
-# CertificateCollection = Tuple[
-#     List[CertificateCallable],
-#     List[CertificateJacobianCallable],
-#     List[CertificateHessianCallable],
-#     List[CertificatePartialCallable],
-#     List[CertificateConditionsCallable],
-# ]
-
 class_k_gain = 2.0
-# Change this to True if you want the linear gain in the CBF condition's class K function
-# to be a decision variable in the optimization problem
 optimized_alpha = False
 
 barriers = [
@@ -134,8 +104,9 @@ cbf_clf_controller = vanilla_cbf_clf_qp_controller(
     # relaxable_clf=True,
 )
 
-Q = 0.0027 * jnp.eye(len(INITIAL_STATE))  # process noise
-R = 0.05 * jnp.eye(len(INITIAL_STATE))  # measurement noise
+# Q = 0.0027 * jnp.eye(len(INITIAL_STATE))  # process noise
+Q = 0.05 * jnp.eye(len(INITIAL_STATE))  # process noise
+R = 7.997e-5 * jnp.eye(len(INITIAL_STATE))  # measurement noise -> not used for GEKF
 plant_jacobians = jacfwd(dynamics)
 dfdx = plant_jacobians
 h = lambda x: x
@@ -151,32 +122,7 @@ estimator = ct_gekf_dtmeas(
     dt=DT,
 )
 
-### Simulate the system
-# - beginning at initial state x0
-# - with timestep dt
-# - for a fixed number of timesteps num_steps
-# - with system model given by dynamics
-# - and controlled by controller
-# - with state information sensed by sensor
-# - and a state estimate computed by estimator
-# - perturbed by perturbation (on plant, not measurement)
-# - with numerical integration scheme specified by integrator
-# - and data saved out to filepath
-
-# Returns:
-# x: states
-# u: controls
-# z: estimates
-# p: covariances
-# dkeys: data_keys
-# dvalues: data_values
-# (dkeys, dvalues) are returned by cbf_clf_qp_generator.jittable_controller in:
-#       cbfkit.controllers.model_based.cbf_clf_controllers.cbf_clf_qp_generator
-# Usually this data is returned by the controller in:
-#                           cbfkit.simulation.simulator.stepper()
-
-
-x, u, observations, p, dkeys, dvalues, measurements = sim.execute(
+x, u, estimates, p, dkeys, dvalues, measurements = sim.execute(
     x0=INITIAL_STATE,
     dt=DT,
     num_steps=N_STEPS,
@@ -210,6 +156,7 @@ ax.set_title(f"System Trajectory (T = {total_time:.2f} s)")
 
 save = True
 animate = False
+plot_heading = False
 
 save_directory = "plots/" + model_name + "_gekf/"
 
@@ -223,12 +170,12 @@ if save:
     ax.axvline(x=wall_x, color='purple', linestyle=':', linewidth=2, label=f"obstacle")
     ax.plot(x[:, 0], x[:, 1], label='True Trajectory')
     measurements = np.array(measurements)
+    estimates = np.array(estimates)
 
     if len(x) == len(measurements):
         ax.plot(measurements[:, 0], measurements[:, 1], label='Measured Trajectory', linewidth=0.5)
+        ax.plot(estimates[:, 0], estimates[:, 1], label='Estimated Trajectory', linewidth=0.5)
         ax.legend()
-
-    plot_heading = False
 
     if(plot_heading):
         # Plot direction arrows
@@ -296,7 +243,7 @@ if save:
     fig5, ax5 = plt.subplots()
     ax5.plot(time_steps, x[:, 0], label='True X')
     ax5.plot(time_steps, measurements[:, 0], label='Measured X', linewidth=0.5)
-    ax5.plot(time_steps, observations[:, 0], label='Observed X', linestyle='--', linewidth=0.7)
+    ax5.plot(time_steps, estimates[:, 0], label='Estimated X', linestyle='--', linewidth=0.7)
     ax5.set_xlabel("Time (s)")
     ax5.set_ylabel("X")
     ax5.legend()
@@ -305,7 +252,7 @@ if save:
     fig6, ax6 = plt.subplots()
     ax6.plot(time_steps, x[:, 1], label='True Y')
     ax6.plot(time_steps, measurements[:, 1], label='Measured Y', linewidth=0.5)
-    ax6.plot(time_steps, observations[:, 1], label='Observed Y', linestyle='--', linewidth=0.7)
+    ax6.plot(time_steps, estimates[:, 1], label='Estimated Y', linestyle='--', linewidth=0.7)
     ax6.set_xlabel("Time (s)")
     ax6.set_ylabel("Y")
     ax6.legend()
