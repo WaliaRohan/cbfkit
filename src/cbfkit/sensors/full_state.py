@@ -177,10 +177,14 @@ def unbiased_gaussian_noise_mult(
     n_initial_meas = 10
     max_iter = n_initial_meas if t == 0 else 1
     normal_samples = jnp.zeros((max_iter, dim))
+    normal_samples_2 = jnp.zeros((max_iter, dim))
     
     for ii in range(max_iter):
         key, subkey = random.split(key)
+        key, subkey2 = random.split(key)
         normal_samples = normal_samples.at[ii, :].set(random.normal(subkey, shape=(dim,)))
+        normal_samples_2 = normal_samples_2.at[ii, :].set(random.normal(subkey2, shape=(dim,)))
+
 
     chol_u = get_chol(sigma_u, dim)
     chol_v = get_chol(sigma_v, dim)
