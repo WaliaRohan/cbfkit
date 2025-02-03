@@ -178,7 +178,8 @@ def update_dtmeas(
         sigma_u = 10*2.916e-4 # 10 times more than what was shown in GEKF paper
 
         # Additive noise
-        mu_v = -0.0386
+        # mu_v = -0.0386
+        mu_v = 0
         sigma_v = 7.997e-5
 
         H_dot = dhdx(z)
