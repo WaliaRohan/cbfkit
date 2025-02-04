@@ -166,16 +166,18 @@ if not os.path.exists(save_directory):
 print()
 
 if save:
-
     ax.axvline(x=wall_x, color='purple', linestyle=':', linewidth=2, label=f"obstacle")
-    ax.plot(x[:, 0], x[:, 1], label='True Trajectory')
     measurements = np.array(measurements)
     estimates = np.array(estimates)
 
     if len(x) == len(measurements):
         ax.plot(measurements[:, 0], measurements[:, 1], label='Measured Trajectory', linewidth=0.5)
+        
+    if len(x) == len(estimates):
         ax.plot(estimates[:, 0], estimates[:, 1], label='Estimated Trajectory', linewidth=0.5)
-        ax.legend()
+
+    ax.plot(x[:, 0], x[:, 1], label='True Trajectory')
+    ax.legend()
 
     if(plot_heading):
         # Plot direction arrows
@@ -241,18 +243,18 @@ if save:
     fig4.savefig(save_directory + model_name + " control_values_diff" + ".png")
 
     fig5, ax5 = plt.subplots()
-    ax5.plot(time_steps, x[:, 0], label='True X')
     ax5.plot(time_steps, measurements[:, 0], label='Measured X', linewidth=0.5)
     ax5.plot(time_steps, estimates[:, 0], label='Estimated X', linestyle='--', linewidth=0.7)
+    ax5.plot(time_steps, x[:, 0], label='True X')
     ax5.set_xlabel("Time (s)")
     ax5.set_ylabel("X")
     ax5.legend()
     fig5.savefig(save_directory + model_name + " true_vs_measured_x" + ".png")
 
     fig6, ax6 = plt.subplots()
-    ax6.plot(time_steps, x[:, 1], label='True Y')
     ax6.plot(time_steps, measurements[:, 1], label='Measured Y', linewidth=0.5)
     ax6.plot(time_steps, estimates[:, 1], label='Estimated Y', linestyle='--', linewidth=0.7)
+    ax6.plot(time_steps, x[:, 1], label='True Y')
     ax6.set_xlabel("Time (s)")
     ax6.set_ylabel("Y")
     ax6.legend()
