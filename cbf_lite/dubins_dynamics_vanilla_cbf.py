@@ -17,10 +17,10 @@ dt = 0.1  # Time step
 T = 100 # Number of steps
 x_traj = []  # Store trajectory
 u_traj = []  # Store controls
-u_max = 10.0
+u_max = 1.0
 
 # Initial state (truth)
-x_true = jnp.array([-1.5, -1.5])  # Start position
+x_true = jnp.array([-1.0, -1.0])  # Start position
 goal = jnp.array([2.0, 2.0])  # Goal position
 obstacle = jnp.array([1.0, 1.0])  # Obstacle position
 safe_radius = 0.5  # Safety radius around the obstacle
@@ -34,7 +34,7 @@ grad_h = grad(cbf, argnums=0)  # ∇h(x)
 # OSQP solver instance
 solver = OSQP()
 
-# @jit
+@jit
 def solve_qp(x_estimated):
     """Solve the CLF-CBF-QP using JAX & OSQP"""
     # Compute CLF components
@@ -81,6 +81,8 @@ def solve_qp(x_estimated):
     sol = solver.run(params_obj=(Q, c), params_eq=A, params_ineq=(l, u)).params
     return sol
 
+x_traj.append(x_true)
+
 # Simulation loop
 for _ in range(T):
     # Get reading from sensor
@@ -97,7 +99,7 @@ for _ in range(T):
     # Store for plotting
     x_traj.append(x_true.copy())
     u_traj.append(u_opt)
-    print(x_true)
+    # print(x_true)
 
 # Convert to JAX arrays
 x_traj = jnp.array(x_traj)
