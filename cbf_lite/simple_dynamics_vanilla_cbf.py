@@ -3,43 +3,51 @@ import matplotlib.pyplot as plt
 import numpy as np
 from cbfs import vanilla_cbf as cbf
 from cbfs import vanilla_clf as clf
+from dynamics import SimpleDynamics
 from sensor import noisy_sensor as sensor
 
 # Define simulation parameters
 dt = 0.1  # Time step
-T = 50  # Number of steps
+T = 30  # Number of steps
 x_traj = []  # Store trajectory
 u_traj = []  # Store controls
 
 # Initial state (truth)
 x_true = np.array([-1.5, -1.5])  # Start position
 goal = np.array([2.0, 2.0])  # Goal position
+
 obstacle = np.array([1.0, 1.0])  # Obstacle position
 safe_radius = 0.5  # Safety radius around the obstacle
+
+dynamics = SimpleDynamics()
 
 # Simulation loop
 for _ in range(T):
     # Get reading from sensor
     x_measured = sensor(x_true)
 
+    x_estimated = x_measured
+
     # Optimization variables
     u = cp.Variable(2)
     delta = cp.Variable()
 
-    # Compute CLF components based on belief (x_measured)
-    V = clf(x_measured, goal)
-    L_f_V = 2 * (x_measured - goal)
+    # Compute CLF components based on belief (x_estimated)
+    V = clf(x_estimated, goal)
+    L_f_V = 2 * (x_estimated - goal) @ dynamics.f(x_estimated)
+    L_g_V = 2 * (x_estimated - goal) @ dynamics.g(x_estimated)
     gamma = 1.0  # CLF gain
 
-    # Compute CBF components based on belief (x_measured)
-    h = cbf(x_measured, obstacle, safe_radius)
-    L_f_h = 2 * (x_measured - obstacle)
+    # Compute CBF components based on belief (x_estimated)
+    h = cbf(x_estimated, obstacle, safe_radius)
+    L_f_h = 2 * (x_estimated - obstacle) @ dynamics.f(x_estimated)
+    L_g_h = 2 * (x_estimated - obstacle) @ dynamics.g(x_estimated)
     alpha = 1.0  # CBF gain
 
     # Constraints
     constraints = [
-        L_f_V @ u + gamma * V <= delta,  # CLF constraint (relaxed)
-        L_f_h @ u + alpha * h >= 0,  # CBF constraint (strict)
+        L_f_V + L_g_V @ u + gamma * V <= delta,  # CLF constraint (relaxed)
+        L_f_h + L_g_h @ u + alpha * h >= 0,  # CBF constraint (strict)
         cp.norm(u, "inf") <= 1.0  # Control limit
     ]
 
@@ -53,7 +61,7 @@ for _ in range(T):
 
     # Apply control to the true state (x_true)
     u_opt = np.array(u.value).flatten()
-    x_true = x_true + dt * u_opt  # Update state (true state)
+    x_true = x_true + (dynamics.f(x_true) + dynamics.g(x_true) @ u_opt)
 
     # Store for plotting
     x_traj.append(x_true.copy())
