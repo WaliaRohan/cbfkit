@@ -61,17 +61,16 @@ def solve_qp(x_estimated):
         -L_g_h   # CBF constraint (negated for inequality direction)
     ])
 
-    l = jnp.array([
+    u = jnp.array([
         -L_f_V - gamma * V,   # CLF constraint
         L_f_h + alpha * h     # CBF constraint
     ])
 
-    u = jnp.inf * jnp.ones_like(l)  # No explicit upper bound (inequalities)
+    l = -jnp.inf * jnp.ones_like(u)  # No explicit upper bound (inequalities)
 
     # Solve the QP using jaxopt OSQP
     init = jnp.zeros(2)
     sol = solver.run(params_obj=(Q, c), params_eq=A, params_ineq=(l, u)).params
-    print(sol)
     return sol
 
 # Simulation loop
@@ -82,6 +81,7 @@ for _ in range(T):
 
     # Solve QP
     u_opt = solve_qp(x_estimated).primal[0]
+    # print(u_opt)
 
     # Apply control to the true state (x_true)
     x_true = x_true + dt * (dynamics.f(x_true) + dynamics.g(x_true) @ u_opt)
@@ -89,6 +89,7 @@ for _ in range(T):
     # Store for plotting
     x_traj.append(x_true.copy())
     u_traj.append(u_opt)
+    print(x_true)
 
 # Convert to JAX arrays
 x_traj = jnp.array(x_traj)
