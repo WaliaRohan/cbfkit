@@ -17,6 +17,7 @@ dt = 0.1  # Time step
 T = 100 # Number of steps
 x_traj = []  # Store trajectory
 u_traj = []  # Store controls
+u_max = 10.0
 
 # Initial state (truth)
 x_true = jnp.array([-1.5, -1.5])  # Start position
@@ -33,7 +34,7 @@ grad_h = grad(cbf, argnums=0)  # ∇h(x)
 # OSQP solver instance
 solver = OSQP()
 
-@jit
+# @jit
 def solve_qp(x_estimated):
     """Solve the CLF-CBF-QP using JAX & OSQP"""
     # Compute CLF components
@@ -58,18 +59,25 @@ def solve_qp(x_estimated):
 
     A = jnp.vstack([
         L_g_V,   # CLF constraint
-        -L_g_h   # CBF constraint (negated for inequality direction)
+        -L_g_h,   # CBF constraint (negated for inequality direction)
+        jnp.eye(2)
     ])
 
-    u = jnp.array([
+    u = jnp.hstack([
         -L_f_V - gamma * V,   # CLF constraint
-        L_f_h + alpha * h     # CBF constraint
+        L_f_h + alpha * h,     # CBF constraint
+        jnp.inf,
+        u_max 
     ])
 
-    l = -jnp.inf * jnp.ones_like(u)  # No explicit upper bound (inequalities)
+    l = jnp.hstack([
+        -jnp.inf,
+        -jnp.inf,
+        -jnp.inf,
+        -u_max
+    ])
 
     # Solve the QP using jaxopt OSQP
-    init = jnp.zeros(2)
     sol = solver.run(params_obj=(Q, c), params_eq=A, params_ineq=(l, u)).params
     return sol
 
