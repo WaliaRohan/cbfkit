@@ -79,12 +79,14 @@ def solve_qp(x_estimated):
 
     # Solve the QP using jaxopt OSQP
     sol = solver.run(params_obj=(Q, c), params_eq=A, params_ineq=(l, u)).params
-    return sol
+    return sol, V, h
 
 x_traj = []  # Store trajectory
 x_meas = [] # Measurements
 x_est = [] # Estimates
 u_traj = []  # Store controls
+clf_values = []
+cbf_values = []
 
 x_traj.append(x_true)
 x_estimated = estimator.get_belief()
@@ -92,7 +94,12 @@ x_estimated = estimator.get_belief()
 # Simulation loop
 for _ in range(T):
     # Solve QP
-    u_opt = solve_qp(x_estimated).primal[0]
+    sol, V, h = solve_qp(x_estimated)
+
+    clf_values.append(V)
+    cbf_values.append(h)
+
+    u_opt = sol.primal[0]
 
     # Apply control to the true state (x_true)
     x_true = x_true + dt * (dynamics.f(x_true) + dynamics.g(x_true) @ u_opt)
@@ -142,9 +149,9 @@ plt.plot(x_meas[:, 0], color="green", label="Measured x", linestyle="dashed")
 plt.plot(x_est[:, 0], color="orange", label="Estimated x", linestyle="dotted")
 plt.plot(x_traj[:, 0], color="blue", label="True x")
 plt.xlabel("Time step")
-plt.ylabel("X component")
+plt.ylabel("X")
 plt.legend()
-plt.title("X Component Comparison")
+plt.title("X Trajectory")
 plt.show()
 
 # Third figure: Y component comparison
@@ -153,8 +160,22 @@ plt.plot(x_meas[:, 1], color="green", label="Measured y", linestyle="dashed")
 plt.plot(x_est[:, 1], color="orange", label="Estimated y", linestyle="dotted")
 plt.plot(x_traj[:, 1], color="blue", label="True y")
 plt.xlabel("Time step")
-plt.ylabel("Y component")
+plt.ylabel("Y")
 plt.legend()
-plt.title("Y Component Comparison")
+plt.title("Y Trajectory")
+plt.show()
+
+plt.figure(figsize=(6, 4))
+plt.plot(cbf_values)
+plt.xlabel("Time step")
+plt.ylabel("CBF")
+plt.title("CBF")
+plt.show()
+
+plt.figure(figsize=(6, 4))
+plt.plot(clf_values)
+plt.xlabel("Time step")
+plt.ylabel("CLF")
+plt.title("CLF")
 plt.show()
 
