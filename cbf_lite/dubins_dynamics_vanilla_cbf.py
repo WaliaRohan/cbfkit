@@ -3,7 +3,7 @@ import jax.numpy as jnp
 import jax.scipy.linalg as linalg
 import matplotlib.pyplot as plt
 import numpy as np
-from cbfs import vanilla_cbf as cbf
+from cbfs import vanilla_cbf_circle as cbf
 from cbfs import vanilla_clf as clf
 from dynamics import SimpleDynamics
 from estimators import NonlinearEstimator as EKF
