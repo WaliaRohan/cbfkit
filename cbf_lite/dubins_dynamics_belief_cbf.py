@@ -3,7 +3,9 @@ import jax.numpy as jnp
 import jax.scipy.linalg as linalg
 import matplotlib.pyplot as plt
 import numpy as np
-from cbfs import vanilla_cbf_circle as cbf
+# from cbfs import vanilla_cbf_circle as cbf
+from cbfs import belief_cbf_half_space as belief_cbf
+from functools import partial
 from cbfs import vanilla_clf as clf
 from dynamics import SimpleDynamics
 from estimators import NonlinearEstimator as EKF
@@ -27,6 +29,15 @@ safe_radius = 0.0  # Safety radius around the obstacle
 dynamics = SimpleDynamics()
 estimator = EKF(dynamics, sensor, dt, x_init=x_true)
 
+# Define belief CBF parameters
+wall_x = 10.0
+alpha = jnp.eye(4)
+beta = jnp.array([wall_x, None, None, None])  # Only x state should be filled and checked
+delta = 0.05  # Probability of failure should always be below this value 
+# Generate partial belief_cbf with fixed alpha, beta, and sigma
+cbf = partial(belief_cbf, alpha, beta, delta) can't use this as is. Need to find higher order CBF
+
+
 # Autodiff: Compute Gradients for CLF and CBF
 grad_V = grad(clf, argnums=0)  # ∇V(x)
 grad_h = grad(cbf, argnums=0)  # ∇h(x)
@@ -46,7 +57,8 @@ def solve_qp(x_estimated):
     gamma = 1.0  # CLF gain
 
     # Compute CBF components
-    h = cbf(x_estimated, obstacle, safe_radius)
+    # h = cbf(x_estimated, obstacle, safe_radius)
+    h = cbf(x_estimated)
     grad_h_x = grad_h(x_estimated, obstacle, safe_radius)  # ∇h(x)
 
     L_f_h = jnp.dot(grad_h_x, dynamics.f(x_estimated))

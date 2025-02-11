@@ -26,6 +26,10 @@ def belief_cbf_half_space(alpha, beta, delta, mu, sigma):
     delta: probability of failure (we want system to be have probability of feailure less than delta)
     
     '''
+
+
+    can't use this as is. need to find a way to only use x state
+
     term1 = jnp.dot(alpha.T, mu) - beta
     term2 = jnp.sqrt(2 * jnp.dot(alpha.T, jnp.dot(sigma, alpha))) * erfinv(1 - 2 * delta)
     return term1 - term2
