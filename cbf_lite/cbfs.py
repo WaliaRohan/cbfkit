@@ -1,22 +1,23 @@
 import jax.numpy as jnp
-import jax.scipy.special as jsp
-import numpy as np
-
+from jax.scipy.special import erfinv
 
 # CLF: V(x) = ||x - goal||^2
 def vanilla_clf(x, goal):
     return jnp.linalg.norm(x - goal) ** 2
 
 # CBF: h(x) = ||x - obstacle||^2 - safe_radius^2
-def vanilla_cbf(x, obstacle, safe_radius):
+def vanilla_cbf_circle(x, obstacle, safe_radius):
     return jnp.linalg.norm(x - obstacle) ** 2 - safe_radius**2
+
+def vanilla_cbf_wall(x, wall_x):
+    return wall_x - x[1]
 
 ### Belief CBF
 
 import numpy as np
 
 
-def h_b(alpha, beta, mu, sigma, delta):
+def belief_cbf_half_space(alpha, beta, delta, mu, sigma):
     '''
     alpha: linear gain from half-space constraint (alpha^T.x >= B, where x is the state)
     beta: constant from half-space constraint
@@ -25,9 +26,8 @@ def h_b(alpha, beta, mu, sigma, delta):
     delta: probability of failure (we want system to be have probability of feailure less than delta)
     
     '''
-
-    term1 = alpha.T @ mu - beta
-    term2 = jnp.sqrt(2*alpha.T @ sigma @ alpha) * jsp.erfinv(1 - 2 * delta)
+    term1 = jnp.dot(alpha.T, mu) - beta
+    term2 = jnp.sqrt(2 * jnp.dot(alpha.T, jnp.dot(sigma, alpha))) * erfinv(1 - 2 * delta)
     return term1 - term2
 
 
