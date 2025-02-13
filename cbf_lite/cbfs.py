@@ -1,4 +1,6 @@
 import jax.numpy as jnp
+import jax.scipy.special as jsp
+import numpy as np
 
 
 # CLF: V(x) = ||x - goal||^2
@@ -25,8 +27,27 @@ def h_b(alpha, beta, mu, sigma, delta):
     '''
 
     term1 = alpha.T @ mu - beta
-    term2 = np.sqrt(2*alpha.T @ sigma @ alpha) * np.erfinv(1 - 2 * delta)
+    term2 = jnp.sqrt(2*alpha.T @ sigma @ alpha) * jsp.erfinv(1 - 2 * delta)
     return term1 - term2
+
+
+def h_b_rb2(alpha, beta, mu, sigma, delta):
+    '''
+    Function for calculating barrier function for h_b where relative degree is 2
+    
+    '''
+
+    roots = jnp.array([-0.1]) # Manually select root to be in left half plane
+    polynomial = np.poly1d(roots, r=True)
+    coeff = jnp.array(polynomial.coeffs)
+
+    h_0 = h_b(alpha, beta, mu, sigma, delta)
+    h_1 = jnp.grad(h_b, argnums=2) # 1st order derivative, take derivative with respect to mean of belief
+
+    h_2 = jnp.array(h_0*coeff[0]) + jnp.array(h_1*coeff[1]) # equation 4 (belief paper), equation 38 (ECBF paper)
+
+    return h_2
+
 
 
     
