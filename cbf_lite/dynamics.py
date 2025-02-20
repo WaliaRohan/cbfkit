@@ -4,17 +4,21 @@ import jax.numpy as jnp
 class SimpleDynamics:
     """Simple system dynamics: dx/dt = f(x) + g(x) u"""
     
-    def __init__(self):
-        self.A = jnp.array([[0, 0], [0, 0]])  # No drift for now
-        self.B = jnp.array([[1, 0], [0, 1]])  # Identity control matrix
+    def __init__(self, Q=None):
+        self.f_matrix = jnp.array([[0, 0], [0, 0]])  # No drift for now
+        self.g_matrix = jnp.array([[1, 0], [0, 1]])  # Identity control matrix
+        if Q is None:
+            self.Q = jnp.eye(self.f_matrix.shape[1])*0 
+        else:
+            self.Q = Q
 
     def f(self, x):
         """Drift dynamics: f(x)"""
-        return self.A @ x  # Linear drift (zero in this case)
+        return self.f_matrix @ x  # Linear drift (zero in this case)
 
     def g(self, x):
         """Control matrix: g(x)"""
-        return self.B  # Constant control input mapping
+        return self.g_matrix  # Constant control input mapping
     
 
 class DubinsDynamics:
