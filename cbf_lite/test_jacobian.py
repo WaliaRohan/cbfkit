@@ -1,7 +1,7 @@
 import sympy as sp
 from dynamics import SimpleDynamics
 
-case = "Simple" # "Simple", "Dubins"
+case = "Dubins" # "Simple", "Dubins"
 
 if case == "Simple":
     dynamics = SimpleDynamics()
@@ -52,4 +52,12 @@ J_u = x_dot.jacobian(u)
 print("Jacobian of x_dot with respect to u: ")
 
 sp.pprint(J_u)
+
+# Compute the joint Jacobian with respect to both x and u
+z = sp.Matrix.vstack(x, u)  # Combine x and u into a single vector
+joint_jacobian = x_dot.jacobian(z)
+
+# Print the result
+print("Joint Jacobian [J_x | J_u]:")
+sp.pprint(joint_jacobian)
 
