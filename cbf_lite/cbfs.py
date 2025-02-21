@@ -23,18 +23,29 @@ KEY = random.PRNGKey(0)
 KEY, SUBKEY = random.split(KEY)
 
 
-def belief_cbf_half_space(alpha, beta, delta, mu, sigma):
+def belief_cbf_half_space(b, alpha, beta, delta, n):
     '''
     alpha: linear gain from half-space constraint (alpha^T.x >= B, where x is the state)
     beta: constant from half-space constraint
     mu: mean of state belief
     sigma: covariance of state belief
     delta: probability of failure (we want system to be have probability of feailure less than delta)
-    
     '''
+
+    """Computes h_b(b) given belief state b = [mu, vec_u(Sigma)]"""
+    mu = b[:n]  # Extract mean vector
+    mu = mu.reshape(-1, 1)
+    vec_sigma = b[n:]  # Extract upper triangular part of Sigma
+
+    # Reconstruct full symmetric covariance matrix from vec(Sigma)
+    sigma = jnp.zeros((n, n))
+    upper_indices = jnp.triu_indices(n)  # Get upper triangular indices
+    sigma = sigma.at[upper_indices].set(vec_sigma)
+    sigma = sigma + sigma.T - jnp.diag(jnp.diag(sigma))  # Enforce symmet
+
     term1 = jnp.dot(alpha.T, mu) - beta
     term2 = jnp.sqrt(2 * jnp.dot(alpha.T, jnp.dot(sigma, alpha))) * erfinv(1 - 2 * delta)
-    return term1 - term2
+    return (term1 - term2).squeeze()
 
 # def get_diff(function, x, sigma):
 
