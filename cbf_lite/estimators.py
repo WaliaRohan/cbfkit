@@ -2,6 +2,7 @@ import jax
 import jax.numpy as jnp
 import jax.scipy.linalg as linalg
 
+
 class NonlinearEstimator:
     """Extended Kalman Filter (EKF) for state estimation with internal belief tracking."""
     
@@ -46,4 +47,4 @@ class NonlinearEstimator:
 
     def get_belief(self):
         """Return the current belief (state estimate)."""
-        return self.x_hat
+        return self.x_hat, self.P

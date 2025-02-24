@@ -1,11 +1,9 @@
-import jax
 import jax.numpy as jnp
-import jax.scipy.linalg as linalg
 import matplotlib.pyplot as plt
 import numpy as np
+
 # from cbfs import vanilla_cbf_circle as cbf
-from cbfs import belief_cbf_half_space as belief_cbf
-from functools import partial
+from cbfs import BeliefCBF
 from cbfs import vanilla_clf as clf
 from dynamics import SimpleDynamics
 from estimators import NonlinearEstimator as EKF
@@ -14,6 +12,7 @@ from jax import grad, jit
 # from osqp import OSQP
 from jaxopt import BoxOSQP as OSQP
 from sensor import noisy_sensor as sensor
+from tqdm import tqdm
 
 # Define simulation parameters
 dt = 0.01  # Time step
@@ -30,40 +29,39 @@ dynamics = SimpleDynamics()
 estimator = EKF(dynamics, sensor, dt, x_init=x_true)
 
 # Define belief CBF parameters
-wall_x = 10.0
-alpha = jnp.eye(4)
-beta = jnp.array([wall_x, None, None, None])  # Only x state should be filled and checked
-delta = 0.05  # Probability of failure should always be below this value 
-# Generate partial belief_cbf with fixed alpha, beta, and sigma
-cbf = partial(belief_cbf, alpha, beta, delta) can't use this as is. Need to find higher order CBF
-
+n = 2
+alpha = jnp.array([1.0, 0.0])  # Example matrix
+beta = jnp.array([5.0])  # Example vector
+delta = 0.05  # Probability threshold
+cbf = BeliefCBF(alpha, beta, delta, n)
 
 # Autodiff: Compute Gradients for CLF and CBF
 grad_V = grad(clf, argnums=0)  # ∇V(x)
-grad_h = grad(cbf, argnums=0)  # ∇h(x)
 
 # OSQP solver instance
 solver = OSQP()
 
 @jit
-def solve_qp(x_estimated):
+def solve_qp(b):
+    x_estimated, sigma = cbf.extract_mu_sigma(b)
+
     """Solve the CLF-CBF-QP using JAX & OSQP"""
     # Compute CLF components
     V = clf(x_estimated, goal)
     grad_V_x = grad_V(x_estimated, goal)  # ∇V(x)
 
-    L_f_V = jnp.dot(grad_V_x, dynamics.f(x_estimated))
-    L_g_V = jnp.dot(grad_V_x, dynamics.g(x_estimated))
+    L_f_V = jnp.dot(grad_V_x.T, dynamics.f(x_estimated))
+    L_g_V = jnp.dot(grad_V_x.T, dynamics.g(x_estimated))
     gamma = 1.0  # CLF gain
 
     # Compute CBF components
-    # h = cbf(x_estimated, obstacle, safe_radius)
-    h = cbf(x_estimated)
-    grad_h_x = grad_h(x_estimated, obstacle, safe_radius)  # ∇h(x)
+    h_b = cbf.h_b(b)
+    L_f_hb, L_g_hb = cbf.h_dot_b(b, dynamics)
 
-    L_f_h = jnp.dot(grad_h_x, dynamics.f(x_estimated))
-    L_g_h = jnp.dot(grad_h_x, dynamics.g(x_estimated))
-    alpha = 1.0  # CBF gain
+    L_f_hb = L_f_hb.reshape(1, 1) # reshape to match L_f_V
+    L_g_gb = L_g_hb.reshape(1, 2) # reshape to match L_g_V
+
+    cbf_gain = 1.0  # CBF gain
 
     # Define QP matrices
     Q = jnp.eye(2)  # Minimize ||u||^2
@@ -71,13 +69,13 @@ def solve_qp(x_estimated):
 
     A = jnp.vstack([
         L_g_V,   # CLF constraint
-        -L_g_h,   # CBF constraint (negated for inequality direction)
+        -L_g_hb,   # CBF constraint (negated for inequality direction)
         jnp.eye(2)
     ])
 
     u = jnp.hstack([
-        -L_f_V - gamma * V,   # CLF constraint
-        L_f_h + alpha * h,     # CBF constraint
+        (-L_f_V - gamma * V).squeeze(),   # CLF constraint
+        (L_f_hb.squeeze() + cbf_gain * h_b).squeeze(),     # CBF constraint
         jnp.inf,
         u_max 
     ])
@@ -91,7 +89,7 @@ def solve_qp(x_estimated):
 
     # Solve the QP using jaxopt OSQP
     sol = solver.run(params_obj=(Q, c), params_eq=A, params_ineq=(l, u)).params
-    return sol, V, h
+    return sol, V, h_b
 
 x_traj = []  # Store trajectory
 x_meas = [] # Measurements
@@ -101,12 +99,25 @@ clf_values = []
 cbf_values = []
 
 x_traj.append(x_true)
-x_estimated = estimator.get_belief()
+x_estimated, p_estimated = estimator.get_belief()
+
+def get_b_vector(mu, sigma):
+
+    # Extract the upper triangular elements of a matrix as a 1D array
+    upper_triangular_indices = jnp.triu_indices(sigma.shape[0])
+    vec_sigma = sigma[upper_triangular_indices]
+
+    b = jnp.concatenate([mu, vec_sigma])
+
+    return b
 
 # Simulation loop
-for _ in range(T):
+for _ in tqdm(range(T), desc="Simulation Progress"):
+
+    belief = get_b_vector(x_estimated, p_estimated)
+
     # Solve QP
-    sol, V, h = solve_qp(x_estimated)
+    sol, V, h = solve_qp(belief)
 
     clf_values.append(V)
     cbf_values.append(h)
@@ -122,7 +133,7 @@ for _ in range(T):
     # updated estimate 
     estimator.predict(u_opt)
     estimator.update(x_measured)
-    x_estimated = estimator.get_belief()
+    x_estimated, p_estimated = estimator.get_belief()
 
     # Store for plotting
     x_traj.append(x_true.copy())

@@ -22,6 +22,32 @@ class SimpleDynamics:
     
     def x_dot(self, x, u):
         return self.f_matrix@x + self.g_matrix@u
+    
+class NonlinearSingleIntegrator:
+    """Nonlinear single integrator dynamics: dx/dt = f(x) + g(x) u"""
+    
+    def __init__(self, Q=None):
+        if Q is None:
+            self.Q = jnp.eye(2) * 0
+        else:
+            self.Q = Q
+    
+    def f(self, x):
+        """Nonlinear drift dynamics: f(x)"""
+        return jnp.array([
+            jnp.sin(x[0]),
+            jnp.cos(x[1])
+        ])
+    
+    def g(self, x):
+        """State-dependent control matrix: g(x)"""
+        return jnp.array([
+            [1 + 0.1 * jnp.sin(x[0]), 0],
+            [0, 1 + 0.1 * jnp.cos(x[1])]
+        ])
+    
+    def x_dot(self, x, u):
+        return self.f(x) + self.g(x) @ u
 
 class DubinsDynamics:
     """2D Dubins Car Model with constant velocity and control over heading rate."""

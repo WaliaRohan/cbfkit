@@ -22,7 +22,7 @@ elif case == "Dubins":
 
     u = sp.Matrix([u])
 
-    x = sp.Matrix([x, y, v, theta])
+    x_vector = sp.Matrix([x, y, v, theta])
 
     f_matrix = sp.Matrix([
                 v * sp.cos(theta),  # x_dot
@@ -41,7 +41,7 @@ elif case == "Dubins":
     x_dot = f_matrix + g_matrix*u
 
 # Print results
-J_x = x_dot.jacobian(x)
+J_x = x_dot.jacobian(x_vector)
 
 print("Jacobian of x_dot with respect to x: ")
 
@@ -54,7 +54,7 @@ print("Jacobian of x_dot with respect to u: ")
 sp.pprint(J_u)
 
 # Compute the joint Jacobian with respect to both x and u
-z = sp.Matrix.vstack(x, u)  # Combine x and u into a single vector
+z = sp.Matrix.vstack(x_vector, u)  # Combine x and u into a single vector
 joint_jacobian = x_dot.jacobian(z)
 
 # Print the result
