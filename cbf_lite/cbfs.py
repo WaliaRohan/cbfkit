@@ -9,7 +9,7 @@ def vanilla_clf(state, goal):
     return jnp.linalg.norm(state - goal) ** 2
 
 def vanilla_clf_x(state, goal):
-    return jnp.linalg.norm(state[0], goal[0]) ** 2
+    return ((state[0] - goal[0])**2).squeeze()
 
 # CBF: h(x) = ||x - obstacle||^2 - safe_radius^2
 def vanilla_cbf_circle(x, obstacle, safe_radius):
