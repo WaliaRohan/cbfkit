@@ -16,7 +16,7 @@ class NonlinearEstimator:
 
         # Covariance initialization
         self.P = P_init if P_init is not None else jnp.eye(2) * 0.1  
-        self.Q = Q if Q is not None else jnp.eye(2) * 0.01  # Process noise covariance
+        self.Q = dynamics.Q # Process noise covariance
         self.R = R if R is not None else jnp.eye(2) * 0.05  # Measurement noise covariance
 
     def predict(self, u):
