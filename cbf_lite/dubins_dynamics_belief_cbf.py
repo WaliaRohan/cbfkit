@@ -4,7 +4,7 @@ import numpy as np
 
 # from cbfs import vanilla_cbf_circle as cbf
 from cbfs import BeliefCBF
-from cbfs import vanilla_clf as clf
+from cbfs import vanilla_clf_x as clf
 from dynamics import SimpleDynamics
 from estimators import NonlinearEstimator as EKF
 from jax import grad, jit
@@ -16,13 +16,16 @@ from tqdm import tqdm
 
 # Define simulation parameters
 dt = 0.01  # Time step
-T = 1000 # Number of steps
+T = 10000 # Number of steps
 u_max = 1.0
 
+# Obstacle
+wall_x = 10.0
+
 # Initial state (truth)
-x_true = jnp.array([0.5, 0.5])  # Start position
-goal = jnp.array([2.0, 2.0])  # Goal position
-obstacle = jnp.array([1.0, 1.0])  # Obstacle position
+x_true = jnp.array([0.0, 5.0])  # Start position
+goal = jnp.array([11.0, 5.0])  # Goal position
+obstacle = jnp.array([wall_x, 0.0])  # Wall
 safe_radius = 0.0  # Safety radius around the obstacle
 
 dynamics = SimpleDynamics()
@@ -30,8 +33,8 @@ estimator = EKF(dynamics, sensor, dt, x_init=x_true)
 
 # Define belief CBF parameters
 n = 2
-alpha = jnp.array([1.0, 0.0])  # Example matrix
-beta = jnp.array([5.0])  # Example vector
+alpha = jnp.array([-1.0, 0.0])  # Example matrix
+beta = jnp.array([-wall_x])  # Example vector
 delta = 0.05  # Probability threshold
 cbf = BeliefCBF(alpha, beta, delta, n)
 
@@ -59,9 +62,9 @@ def solve_qp(b):
     L_f_hb, L_g_hb = cbf.h_dot_b(b, dynamics)
 
     L_f_hb = L_f_hb.reshape(1, 1) # reshape to match L_f_V
-    L_g_gb = L_g_hb.reshape(1, 2) # reshape to match L_g_V
+    L_g_hb = L_g_hb.reshape(1, 2) # reshape to match L_g_V
 
-    cbf_gain = 1.0  # CBF gain
+    cbf_gain = 2.0  # CBF gain
 
     # Define QP matrices
     Q = jnp.eye(2)  # Minimize ||u||^2
@@ -152,13 +155,13 @@ x_est = np.array(x_est)
 
 # Plot trajectory
 plt.figure(figsize=(6, 6))
+plt.plot(x_meas[:, 0], x_meas[:, 1], color="orange", linestyle=":", label="Measured Trajectory") # Plot measured trajectory
 plt.plot(x_traj[:, 0], x_traj[:, 1], "b-", label="Trajectory (True state)")
 plt.scatter(goal[0], goal[1], c="g", marker="*", s=200, label="Goal")
-plt.scatter(obstacle[0], obstacle[1], c="r", marker="o", s=200, label="Obstacle")
-circle = plt.Circle(obstacle, safe_radius, color="r", fill=False, linestyle="--")
-plt.gca().add_patch(circle)
-# plt.xlim(-2, 3)
-# plt.ylim(-2, 3)
+
+# Plot horizontal line at x = obstacle[0]
+plt.axvline(x=obstacle[0], color="r", linestyle="--", label="Obstacle Boundary")
+
 plt.xlabel("x")
 plt.ylabel("y")
 plt.title("CLF-CBF QP-Controlled Trajectory (Autodiff with JAX)")
