@@ -16,11 +16,11 @@ from tqdm import tqdm
 
 # Define simulation parameters
 dt = 0.01  # Time step
-T = 10000 # Number of steps
+T = 1000 # Number of steps
 u_max = 1.0
 
 # Obstacle
-wall_x = 10.0
+wall_x = 3.0
 
 # Initial state (truth)
 x_true = jnp.array([0.0, 5.0])  # Start position
@@ -55,7 +55,7 @@ def solve_qp(b):
 
     L_f_V = jnp.dot(grad_V_x.T, dynamics.f(x_estimated))
     L_g_V = jnp.dot(grad_V_x.T, dynamics.g(x_estimated))
-    gamma = 1.0  # CLF gain
+    gamma = 0.1  # CLF gain
 
     # Compute CBF components
     h_b = cbf.h_b(b)
