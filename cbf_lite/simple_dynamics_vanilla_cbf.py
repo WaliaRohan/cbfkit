@@ -1,7 +1,7 @@
 import cvxpy as cp
 import matplotlib.pyplot as plt
 import numpy as np
-from cbfs import vanilla_cbf as cbf
+from cbfs import vanilla_cbf_circle as cbf
 from cbfs import vanilla_clf as clf
 from dynamics import SimpleDynamics
 from sensor import noisy_sensor as sensor
