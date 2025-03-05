@@ -157,12 +157,24 @@ def unbiased_gaussian_noise_mult(
 
     """
     # Multiplicative noise
+
+    # No noise
+    # mu_u = 0
+    # sigma_u = 0
+
+    # Low noise
     mu_u = 0.0174
-    sigma_u = 10*2.916e-4 # 10 times more than what was shown in GEKF paper
+    sigma_u = 2.916e-4 # Low noise
+    
+    # High noise
+    # mu_u = 0.94
+    # sigma_u = jnp.sqrt(0.056) # high noise
 
     # Additive noise
-    mu_v = -0.0386
-    sigma_v = 7.997e-5
+    # mu_v = -0.0386
+    mu_v = 0.0
+    # sigma_v = 7.997e-5 # low noise
+    sigma_v = jnp.sqrt(0.05) # high noise
 
     if key is None:
         key = random.PRNGKey(0)
@@ -190,13 +202,15 @@ def unbiased_gaussian_noise_mult(
     chol_v = get_chol(sigma_v, dim)
 
     u_vector = 1 + mu_u + jnp.mean(jnp.dot(chol_u, normal_samples.T), axis=1)
-    v_vector = mu_v + jnp.mean(jnp.dot(chol_v, normal_samples.T), axis=1)
+    v_vector = mu_v + jnp.mean(jnp.dot(chol_v, normal_samples_2.T), axis=1)
 
-    new_x = x + v_vector # add biased gaussian noise
+    new_x = x
 
     # Add multiplicative noise to second state
     state_idx = 1
     if not jnp.isnan(jnp.mean(u_vector)):
-        new_x = x.at[state_idx].set(x[state_idx]*jnp.mean(u_vector))
+        new_x = new_x.at[state_idx].set(new_x[state_idx]*jnp.mean(u_vector))
+
+    new_x = new_x + v_vector # add biased gaussian noise
 
     return new_x
