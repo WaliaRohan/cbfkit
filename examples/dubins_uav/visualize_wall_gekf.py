@@ -50,7 +50,7 @@ from cbfkit.estimators import ct_gekf_dtmeas
 from cbfkit.modeling.additive_disturbances import generate_stochastic_perturbation
 
 # Perfect and imperfect sensors
-from cbfkit.sensors import unbiased_gaussian_noise as noisy_sensor # can just use a non-state dependent sensor here
+# from cbfkit.sensors import unbiased_gaussian_noise as noisy_sensor_mult # can just use a non-state dependent sensor here
 from cbfkit.sensors import unbiased_gaussian_noise_mult as noisy_sensor_mult
 
 # Use forward-Euler numerical integration scheme
@@ -70,9 +70,9 @@ from models import dubins_uav_wall
 # Simulation Parameters
 SAVE_FILE = f"tutorials/{model_name}/simulation_data"
 DT = 1e-3
-TF = 5.0
+TF = 10.0
 N_STEPS = int(TF / DT) + 1
-INITIAL_STATE = jnp.array([0.0, 0.0, np.radians(245), 1.0])
+INITIAL_STATE = jnp.array([0.0, 100.0, np.radians(245), 1.0])
 ACTUATION_LIMITS = jnp.array([1.0])  # Box control input constraint, i.e., -1 <= u <= 1
 
 # Dynamics function: dynamics(x) returns f(x), g(x), d(x)
@@ -171,10 +171,10 @@ if save:
     estimates = np.array(estimates)
 
     if len(x) == len(measurements):
-        ax.plot(measurements[:, 0], measurements[:, 1], label='Measured Trajectory', linewidth=0.5)
+        ax.plot(measurements[:, 0], measurements[:, 1],  color='green', label='Measured Trajectory', linewidth=0.5)
         
     if len(x) == len(estimates):
-        ax.plot(estimates[:, 0], estimates[:, 1], label='Estimated Trajectory', linewidth=0.5)
+        ax.plot(estimates[:, 0], estimates[:, 1], color='orange', label='Estimated Trajectory', linewidth=0.5)
 
     ax.plot(x[:, 0], x[:, 1], color='blue', label='True Trajectory')
     ax.legend()
@@ -287,3 +287,27 @@ if animate:
         raise Exception(
             "Following writers are not available: ffmpeg, imagemagick, pillow. Can't save animation!"
         )
+
+
+def compute_rmse(measurements, x):
+    """
+    Compute the root mean squared error (RMSE) between measurements (p_hat) and x (p)
+    for the first and second states.
+
+    Args:
+        measurements (np.ndarray): N-dimensional 1D numpy array of estimated values.
+        x (np.ndarray): N-dimensional 1D numpy array of true values.
+
+    Returns:
+        tuple: RMSE for the first state and RMSE for the second state.
+    """
+    errors = measurements - x
+    rmse_first = np.sqrt(np.mean(errors[:, 0]**2))  # First state
+    rmse_second = np.sqrt(np.mean(errors[:, 1]**2))  # Second state
+    
+    return rmse_first, rmse_second
+
+
+rmse_1, rmse_2 = compute_rmse(measurements, x)
+# print(f"RMSE x: {rmse_1}")
+print(f"GEKF RMSE y: {rmse_2}")
