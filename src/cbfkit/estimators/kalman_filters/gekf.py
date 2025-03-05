@@ -174,13 +174,33 @@ def update_dtmeas(
         """
 
         # Multiplicative noise
-        mu_u = 0.0174
-        sigma_u = 10*2.916e-4 # 10 times more than what was shown in GEKF paper
 
+        # Zero Noise
+        # mu_u = 0
+        # sigma_u = 0
+
+        # Low noise
+        mu_u = 0.0174
+        sigma_u = 2.916e-4
+        
+        # High noise
+        # mu_u = 0.94
+        # sigma_u = jnp.sqrt(0.056) # high noise
+
+        
         # Additive noise
+
+        # No noise
+        mu_v = 0.0
+        # sigma_v = 0.0
+
+        # Low noise
         # mu_v = -0.0386
-        mu_v = 0
-        sigma_v = 7.997e-5
+        # sigma_v = 7.997e-5 # low noise
+
+        # High noise
+        # mu_v = 0.3
+        sigma_v = jnp.sqrt(0.05)    
 
         H_dot = dhdx(z)
 
