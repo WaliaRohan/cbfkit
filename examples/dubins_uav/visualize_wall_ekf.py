@@ -69,9 +69,9 @@ from models import dubins_uav_wall
 # Simulation Parameters
 SAVE_FILE = f"tutorials/{model_name}/simulation_data"
 DT = 1e-3
-TF = 5.0
+TF = 10.0
 N_STEPS = int(TF / DT) + 1
-INITIAL_STATE = jnp.array([0.0, 0.0, np.radians(245), 1.0])
+INITIAL_STATE = jnp.array([0.0, 100.0, np.radians(245), 1.0])
 ACTUATION_LIMITS = jnp.array([1.0])  # Box control input constraint, i.e., -1 <= u <= 1
 
 # Dynamics function: dynamics(x) returns f(x), g(x), d(x)
@@ -104,8 +104,12 @@ cbf_clf_controller = vanilla_cbf_clf_qp_controller(
     # relaxable_clf=True,
 )
 
+sigma_v_no_noise = 0.00 # No noise
+sigma_v_low_noise = 7.997e-5 # low noise
+sigma_v_high_noise = jnp.sqrt(0.05)
+
 Q = 0.05 * jnp.eye(len(INITIAL_STATE))  # process noise
-R = 7.997e-5 * jnp.eye(len(INITIAL_STATE))  # measurement noise
+R = sigma_v_high_noise * jnp.eye(len(INITIAL_STATE))  # measurement noise
 plant_jacobians = jacfwd(dynamics)
 dfdx = plant_jacobians
 h = lambda x: x
@@ -285,3 +289,26 @@ if animate:
         raise Exception(
             "Following writers are not available: ffmpeg, imagemagick, pillow. Can't save animation!"
         )
+
+def compute_rmse(measurements, x):
+    """
+    Compute the root mean squared error (RMSE) between measurements (p_hat) and x (p)
+    for the first and second states.
+
+    Args:
+        measurements (np.ndarray): N-dimensional 1D numpy array of estimated values.
+        x (np.ndarray): N-dimensional 1D numpy array of true values.
+
+    Returns:
+        tuple: RMSE for the first state and RMSE for the second state.
+    """
+    errors = measurements - x
+    rmse_first = np.sqrt(np.mean(errors[:, 0]**2))  # First state
+    rmse_second = np.sqrt(np.mean(errors[:, 1]**2))  # Second state
+    
+    return rmse_first, rmse_second
+
+
+rmse_1, rmse_2 = compute_rmse(measurements, x)
+# print(f"RMSE x: {rmse_1}")
+print(f"EKF RMSE y: {rmse_2}")
